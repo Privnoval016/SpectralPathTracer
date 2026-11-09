@@ -13,14 +13,11 @@ namespace SpectralPathTracer
         [Tooltip("The path tracer settings.")]
         [SerializeField] private PathTracerSettings settings;
 
-        [Tooltip("The color to fill the canvas with.")]
-        [SerializeField] private Color fillColor = Color.magenta;
-
         #endregion
 
         #region Private Fields
 
-        private const string FillKernelName = "FillCanvas";
+        private const string KernelName = "Render";
 
         private PathTracerPass _pass;
 
@@ -43,10 +40,9 @@ namespace SpectralPathTracer
                 return;
             }
 
-            int kernelIndex = pathTracerShader.FindKernel(FillKernelName);
+            int kernelIndex = pathTracerShader.FindKernel(KernelName);
 
-            // convert to linear space for correct color representation
-            _pass = new PathTracerPass(pathTracerShader, settings, kernelIndex, fillColor.linear)
+            _pass = new PathTracerPass(pathTracerShader, settings, kernelIndex)
             {
                 renderPassEvent = RenderPassEvent.AfterRenderingPostProcessing
             };

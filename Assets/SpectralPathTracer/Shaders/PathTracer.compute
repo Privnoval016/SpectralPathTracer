@@ -1,19 +1,20 @@
-#pragma kernel FillCanvas
+#pragma kernel Render
 
 RWTexture2D<float4> _Output;
-float4 _Color;
 uint2 _Resolution;
 
 /**
  * <summary>
- * Fills the canvas with a solid color.
+ * Colors each pixel by its normalized position: red across, green up.
  * </summary>
  */
 [numthreads(8, 8, 1)]
-void FillCanvas(uint3 id : SV_DispatchThreadID)
+void Render(uint3 id : SV_DispatchThreadID)
 {
     if (any(id.xy >= _Resolution))
         return;
 
-    _Output[id.xy] = _Color;
+    float2 uv = (float2(id.xy) + 0.5f) / float2(_Resolution);
+
+    _Output[id.xy] = float4(uv, 0.0f, 1.0f);
 }

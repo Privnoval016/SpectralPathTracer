@@ -12,12 +12,10 @@ namespace SpectralPathTracer
         #region Private Fields
 
         private static readonly int OutputID = Shader.PropertyToID("_Output");
-        private static readonly int ColorID = Shader.PropertyToID("_Color");
         private static readonly int ResolutionID = Shader.PropertyToID("_Resolution");
 
         private readonly ComputeShader _pathTracerShader;
-        private readonly int _fillKernelIndex;
-        private readonly Color _linearColor;
+        private readonly int _kernelIndex;
 
         private readonly int _threadGroupSizeX;
         private readonly int _threadGroupSizeY;
@@ -27,12 +25,11 @@ namespace SpectralPathTracer
 
         #endregion
 
-        private class FillPassData
+        private class RenderPassData
         {
             public ComputeShader Shader;
             public int Kernel;
             public TextureHandle Output;
-            public Vector4 Color;
             public readonly int[] Resolution = new int[2];
             public int GroupsX;
             public int GroupsY;
@@ -50,17 +47,15 @@ namespace SpectralPathTracer
          * </summary>
          * <param name="pathTracerShader">The compute shader containing the path tracer kernels.</param>
          * <param name="settings">The path tracer settings.</param>
-         * <param name="fillKernelIndex">The index of the kernel used to fill the canvas.</param>
-         * <param name="linearColor">The color to fill the canvas with, in linear space.</param>
+         * <param name="kernelIndex">The index of the kernel that renders the image.</param>
          */
-        public PathTracerPass(ComputeShader pathTracerShader, PathTracerSettings settings, int fillKernelIndex, Color linearColor)
+        public PathTracerPass(ComputeShader pathTracerShader, PathTracerSettings settings, int kernelIndex)
         {
             _pathTracerShader = pathTracerShader;
-            _fillKernelIndex = fillKernelIndex;
-            _linearColor = linearColor;
+            _kernelIndex = kernelIndex;
             _settings = settings;
 
-            pathTracerShader.GetKernelThreadGroupSizes(fillKernelIndex, out uint threadGroupSizeX, out uint threadGroupSizeY, out _);
+            pathTracerShader.GetKernelThreadGroupSizes(kernelIndex, out uint threadGroupSizeX, out uint threadGroupSizeY, out _);
             _threadGroupSizeX = (int)threadGroupSizeX;
             _threadGroupSizeY = (int)threadGroupSizeY;
 
@@ -94,13 +89,11 @@ namespace SpectralPathTracer
 
             if (!_settings.Paused)
             {
-                // compute pass to fill the canvas with the specified color
-                using (var builder = renderGraph.AddComputePass("Path Tracer: Fill Canvas", out FillPassData passData))
+                using (var builder = renderGraph.AddComputePass("Path Tracer: Render", out RenderPassData passData))
                 {
                     passData.Shader = _pathTracerShader;
-                    passData.Kernel = _fillKernelIndex;
+                    passData.Kernel = _kernelIndex;
                     passData.Output = outputTexture;
-                    passData.Color = _linearColor;
                     passData.Resolution[0] = desc.width;
                     passData.Resolution[1] = desc.height;
 
@@ -110,11 +103,10 @@ namespace SpectralPathTracer
                     builder.UseTexture(outputTexture, AccessFlags.Write);
                     
                     // static to reject captured variables from the outer scope
-                    builder.SetRenderFunc(static (FillPassData data, ComputeGraphContext context) =>
+                    builder.SetRenderFunc(static (RenderPassData data, ComputeGraphContext context) =>
                     {
                         var cmd = context.cmd;
                         cmd.SetComputeTextureParam(data.Shader, data.Kernel, OutputID, data.Output);
-                        cmd.SetComputeVectorParam(data.Shader, ColorID, data.Color);
                         cmd.SetComputeIntParams(data.Shader, ResolutionID, data.Resolution);
                         cmd.DispatchCompute(data.Shader, data.Kernel, data.GroupsX, data.GroupsY, 1);
                     });
