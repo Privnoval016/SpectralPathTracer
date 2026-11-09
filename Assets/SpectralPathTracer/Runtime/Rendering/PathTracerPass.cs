@@ -4,6 +4,7 @@ using UnityEngine.Rendering.Universal;
 using UnityEngine.Rendering.RenderGraphModule;
 using UnityEngine.Experimental.Rendering;
 using UnityEngine.Rendering.RenderGraphModule.Util;
+using System.Collections.Generic;
 
 namespace SpectralPathTracer
 {
@@ -18,6 +19,10 @@ namespace SpectralPathTracer
         private static readonly int TanHalfFovYID = Shader.PropertyToID("_TanHalfFov");
         private static readonly int AspectRatioID = Shader.PropertyToID("_AspectRatio");
 
+        private static readonly int SkyZenithID = Shader.PropertyToID("_SkyZenithColor");
+        private static readonly int SkyHorizonID = Shader.PropertyToID("_SkyHorizonColor");
+        private static readonly int SkyGroundID = Shader.PropertyToID("_SkyGroundColor");
+
         #endregion
 
         #region Private Fields
@@ -29,6 +34,8 @@ namespace SpectralPathTracer
 
         private readonly PathTracerSettings _settings;
         private RTHandle _output;
+
+        private bool _reportedMultipleSkies;
 
         #endregion
 
@@ -42,6 +49,7 @@ namespace SpectralPathTracer
             public int GroupsY;
 
             public PinholeCamera Camera;
+            public SkyColors Sky;
         }
 
         private class PresentPassData
@@ -78,6 +86,9 @@ namespace SpectralPathTracer
          */
         public override void RecordRenderGraph(RenderGraph renderGraph, ContextContainer frameData)
         {
+            if (!TryResolveSky(out SkyColors skyColors))
+                return;
+
             UniversalCameraData cameraData = frameData.Get<UniversalCameraData>();
             if (cameraData.cameraType != CameraType.Game)
                 return;
@@ -89,7 +100,7 @@ namespace SpectralPathTracer
             TextureHandle output = ImportOutput(renderGraph, cameraDesc, renderSize);
 
             if (!_settings.Paused)
-                RecordRenderStage(renderGraph, output, renderSize, cameraData.camera);
+                RecordRenderStage(renderGraph, output, renderSize, cameraData.camera, skyColors);
 
             RecordPresentStage(renderGraph, output, resourceData.activeColorTexture, cameraDesc);
         }
@@ -134,8 +145,10 @@ namespace SpectralPathTracer
          * Records the compute pass that renders the image into the output texture.
          * </summary>
          */
-        private void RecordRenderStage(RenderGraph renderGraph, TextureHandle output, Vector2Int renderSize, Camera camera)
+        private void RecordRenderStage(RenderGraph renderGraph, TextureHandle output, Vector2Int renderSize, Camera camera, SkyColors skyColors)
         {
+            
+
             using var builder = renderGraph.AddComputePass("Path Tracer: Render", out RenderPassData passData);
 
             passData.Shader = _pathTracerShader;
@@ -147,6 +160,7 @@ namespace SpectralPathTracer
             passData.GroupsY = GroupCount(renderSize.y, _threadGroupSizeY);
 
             passData.Camera = PinholeCamera.From(camera, _settings);
+            passData.Sky = skyColors;
 
             builder.UseTexture(output, AccessFlags.Write);
 
@@ -159,6 +173,9 @@ namespace SpectralPathTracer
                 cmd.SetComputeMatrixParam(data.Shader, CameraToWorldID, data.Camera.CameraToWorld);
                 cmd.SetComputeFloatParam(data.Shader, TanHalfFovYID, data.Camera.TanHalfFov);
                 cmd.SetComputeFloatParam(data.Shader, AspectRatioID, data.Camera.AspectRatio);
+                cmd.SetComputeVectorParam(data.Shader, SkyZenithID, data.Sky.Zenith.linear);
+                cmd.SetComputeVectorParam(data.Shader, SkyHorizonID, data.Sky.Horizon.linear);
+                cmd.SetComputeVectorParam(data.Shader, SkyGroundID, data.Sky.Ground.linear);
                 cmd.DispatchCompute(data.Shader, data.Kernel, data.GroupsX, data.GroupsY, 1);
             });
         }
@@ -209,6 +226,31 @@ namespace SpectralPathTracer
             float height = Mathf.Round(image.y * scale);
             return new Rect(Mathf.Floor((target.x - width) * 0.5f), Mathf.Floor((target.y - height) * 0.5f), width, height);
         }
+
+        /**
+        * <summary>
+        * Picks this frame's sky.
+        * </summary>
+        */
+        private bool TryResolveSky(out SkyColors sky)
+        {
+            IReadOnlyList<Sky> skies = TracedRegistry.Skies;
+
+            if (skies.Count > 1)
+            {
+                if (!_reportedMultipleSkies)
+                    Debug.LogError($"Path tracer: {skies.Count} Sky components are enabled; disable all but one.");
+
+                _reportedMultipleSkies = true;
+                sky = default;
+                return false;
+            }
+
+            _reportedMultipleSkies = false;
+            sky = skies.Count == 1 ? skies[0].Colors : SkyColors.Default;
+            return true;
+        }
+
 
 
         #endregion
