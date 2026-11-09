@@ -69,4 +69,5 @@ MonoBehaviour:
   m_EditorClassIdentifier: SpectralPathTracer::SpectralPathTracer.PathTracerFeature
   m_Active: 1
   pathTracerShader: {fileID: 7200000, guid: 75e6eb151ea3f474391a5166fa442812, type: 3}
+  settings: {fileID: 11400000, guid: 20b49b96c96244a89ac6e3c4dde2d26b, type: 2}
   fillColor: {r: 1, g: 0, b: 1, a: 1}

@@ -10,6 +10,9 @@ namespace SpectralPathTracer
         [Tooltip("The compute shader containing the path tracer kernels.")]
         [SerializeField] private ComputeShader pathTracerShader;
 
+        [Tooltip("The path tracer settings.")]
+        [SerializeField] private PathTracerSettings settings;
+
         [Tooltip("The color to fill the canvas with.")]
         [SerializeField] private Color fillColor = Color.magenta;
 
@@ -25,6 +28,7 @@ namespace SpectralPathTracer
 
         public override void Create()
         {
+            _pass?.Dispose();
             _pass = null;
 
             if (pathTracerShader == null)
@@ -33,10 +37,16 @@ namespace SpectralPathTracer
                 return;
             }
 
+            if (settings == null)
+            {
+                Debug.LogWarning("PathTracerFeature: No settings assigned.");
+                return;
+            }
+
             int kernelIndex = pathTracerShader.FindKernel(FillKernelName);
 
             // convert to linear space for correct color representation
-            _pass = new PathTracerPass(pathTracerShader, kernelIndex, fillColor.linear)
+            _pass = new PathTracerPass(pathTracerShader, settings, kernelIndex, fillColor.linear)
             {
                 renderPassEvent = RenderPassEvent.AfterRenderingPostProcessing
             };
@@ -44,12 +54,19 @@ namespace SpectralPathTracer
 
         public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData)
         {
-            if (_pass == null)
+            if (_pass == null || !settings.IsEnabledForCurrentMode)
             {
                 return;
             }
 
             renderer.EnqueuePass(_pass);
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            base.Dispose(disposing);
+            _pass?.Dispose();
+            _pass = null;
         }
 
     }
