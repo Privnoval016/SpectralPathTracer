@@ -2,10 +2,26 @@
 
 RWTexture2D<float4> _Output;
 uint2 _Resolution;
+float4x4 _CameraToWorld;
+float _TanHalfFov;
+float _AspectRatio;
 
 /**
  * <summary>
- * Colors each pixel by its normalized position: red across, green up.
+ * Computes the direction of a ray from the camera through a pixel in normalized device coordinates.
+ * </summary>
+ * <param name="ndc">The normalized device coordinates of the pixel, where (-1,-1) is the bottom-left and (1,1) is the top-right.</param>
+ * <returns>The normalized direction of the ray in world space.</returns>
+ */
+float3 CameraRayDirection(float2 ndc)
+{
+    float3 local = float3(ndc.x * _AspectRatio * _TanHalfFov, ndc.y * _TanHalfFov, 1.0f);
+    return normalize(mul(_CameraToWorld, float4(local, 0.0f)).xyz);
+}
+
+/**
+ * <summary>
+ * Shows each pixel's camera ray direction as a color: red for +x, green for +y, blue for +z.
  * </summary>
  */
 [numthreads(8, 8, 1)]
@@ -15,6 +31,6 @@ void Render(uint3 id : SV_DispatchThreadID)
         return;
 
     float2 uv = (float2(id.xy) + 0.5f) / float2(_Resolution);
-
-    _Output[id.xy] = float4(uv, 0.0f, 1.0f);
+    float3 rayDir = CameraRayDirection(uv * 2.0f - 1.0f);
+    _Output[id.xy] = float4(rayDir * 0.5f + 0.5f, 1.0f);
 }
