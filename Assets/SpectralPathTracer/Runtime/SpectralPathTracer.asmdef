@@ -1,0 +1,6 @@
+{
+    "name": "SpectralPathTracer",
+    "rootNamespace": "SpectralPathTracer",
+    "references": [],
+    "autoReferenced": true
+}
