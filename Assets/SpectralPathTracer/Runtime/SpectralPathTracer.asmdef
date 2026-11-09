@@ -1,6 +1,9 @@
 {
     "name": "SpectralPathTracer",
     "rootNamespace": "SpectralPathTracer",
-    "references": [],
+    "references": [
+        "Unity.RenderPipelines.Core.Runtime",
+        "Unity.RenderPipelines.Universal.Runtime"
+    ],
     "autoReferenced": true
 }

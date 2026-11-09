@@ -1,0 +1,19 @@
+#pragma kernel FillCanvas
+
+RWTexture2D<float4> _Output;
+float4 _Color;
+uint2 _Resolution;
+
+/**
+ * <summary>
+ * Fills the canvas with a solid color.
+ * </summary>
+ */
+[numthreads(8, 8, 1)]
+void FillCanvas(uint3 id : SV_DispatchThreadID)
+{
+    if (any(id.xy >= _Resolution))
+        return;
+
+    _Output[id.xy] = _Color;
+}
