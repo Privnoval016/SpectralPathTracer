@@ -23,9 +23,9 @@ namespace SpectralPathTracer
 
         private readonly SceneCompiler _sceneCompiler = new SceneCompiler();
 
-        private RTHandle _radiance;
-
-        private uint _sampleIndex;
+        private GraphicsBuffer _accumulation;
+        private AccumulationSignature _signature;
+        private uint _sampleCount;
 
         private bool _reportedMultipleSkies;
 
@@ -72,33 +72,38 @@ namespace SpectralPathTracer
 
             UniversalResourceData resourceData = frameData.Get<UniversalResourceData>();
             TextureDesc cameraDesc = renderGraph.GetTextureDesc(resourceData.activeColorTexture);
+            var camera = PinholeCamera.From(cameraData.camera, _settings);
+            Vector2Int renderSize = _settings.RenderResolution;
+
+            UpdateAccumulation(camera, renderSize, skyColors);
+            bool accumulating = !_settings.Paused && (_settings.TargetSamples == 0 || _sampleCount < _settings.TargetSamples);
+
             var depthRange = new Vector2(_aovSettings.DepthNear, _aovSettings.DepthFar);
-            var frame = new FrameContext(_settings.RenderResolution, _settings.OutputResolution, _sampleIndex, _settings.MaxBounces, PinholeCamera.From(cameraData.camera, _settings), skyColors, _aovSettings.Aov, depthRange, _aovSettings.NoiseDimension, _settings.Exposure, _settings.ShowGrayRamp);
+            var frame = new FrameContext(renderSize, _settings.OutputResolution, _sampleCount, _settings.MaxBounces, camera, skyColors, _aovSettings.Aov, depthRange, _aovSettings.NoiseDimension, _settings.Exposure, _settings.ShowGrayRamp);
 
-            TextureHandle radiance = ImportRadiance(renderGraph, cameraDesc, frame.RenderSize);
-
-            _sceneCompiler.Update();
-
-            if (!_settings.Paused)
+            BufferHandle accumulation = renderGraph.ImportBuffer(_accumulation);
+            if (accumulating)
             {
-                RecordWavefront(renderGraph, frame, radiance);
-                _sampleIndex++;
+                RecordWavefront(renderGraph, frame, accumulation);
+                _sampleCount++;
             }
 
+            AccumulationProgress.Report((int)_sampleCount, _settings.TargetSamples, accumulating);
+
             // the display transform runs even while paused, so exposure can be adjusted on a frozen image
-            TextureHandle display = _displayStage.Record(renderGraph, frame, radiance);
+            TextureHandle display = _displayStage.Record(renderGraph, frame, accumulation, (int)_sampleCount);
             _presentStage.Record(renderGraph, display, resourceData.activeColorTexture, cameraDesc, _settings.OutputResolution);
         }
 
         /**
          * <summary>
-         * Releases the persistent output texture and scene buffers.
+         * Releases the persistent accumulation buffer and scene buffers.
          * </summary>
          */
         public void Dispose()
         {
-            _radiance?.Release();
-            _radiance = null;
+            _accumulation?.Release();
+            _accumulation = null;
             _sceneCompiler.Dispose();
         }
 
@@ -106,25 +111,42 @@ namespace SpectralPathTracer
 
         /**
          * <summary>
-         * Makes sure the persistent radiance texture matches this frame's size and format, then imports it.
+         * Restarts the running sums when anything upstream of them changed: the scene, the camera, the render size
+         * or any setting that changes the rendered image. Exposure isn't one of them; it applies after the average.
          * </summary>
-         * <param name="renderGraph">The render graph recording this frame.</param>
-         * <param name="cameraDesc">The camera target's descriptor, used as the starting point.</param>
+         * <param name="camera">This frame's camera.</param>
          * <param name="renderSize">The size to render at this frame.</param>
-         * <returns>The radiance texture's handle for this frame's render graph.</returns>
+         * <param name="sky">This frame's sky.</param>
          */
-        private TextureHandle ImportRadiance(RenderGraph renderGraph, TextureDesc cameraDesc, Vector2Int renderSize)
+        private void UpdateAccumulation(PinholeCamera camera, Vector2Int renderSize, SkyColors sky)
         {
-            TextureDesc desc = cameraDesc;
-            desc.format = GraphicsFormat.R32G32B32A32_SFloat; // accumulation needs 24 bits of precision and this is also platform agnostic
-            desc.enableRandomWrite = true;
-            desc.msaaSamples = MSAASamples.None;
-            desc.clearBuffer = false;
-            desc.width = renderSize.x;
-            desc.height = renderSize.y;
+            bool resized = EnsureAccumulationBuffer(renderSize);
+            bool sceneChanged = _sceneCompiler.Update();
+            var signature = new AccumulationSignature(camera, renderSize, _settings.MaxBounces, sky, _aovSettings);
 
-            RenderingUtils.ReAllocateHandleIfNeeded(ref _radiance, desc, "PathTracerRadiance");
-            return renderGraph.ImportTexture(_radiance);
+            if (resized || sceneChanged || !signature.Equals(_signature))
+            {
+                _sampleCount = 0;
+                _signature = signature;
+            }
+        }
+
+        /**
+         * <summary>
+         * Makes sure the accumulation buffer holds one float4 sum per pixel, reallocating it when the render size changes.
+         * </summary>
+         * <param name="renderSize">The size to render at this frame.</param>
+         * <returns>True if the buffer was reallocated, so its contents are undefined.</returns>
+         */
+        private bool EnsureAccumulationBuffer(Vector2Int renderSize)
+        {
+            int count = renderSize.x * renderSize.y;
+            if (_accumulation != null && _accumulation.count == count)
+                return false;
+
+            _accumulation?.Release();
+            _accumulation = new GraphicsBuffer(GraphicsBuffer.Target.Structured, count, sizeof(float) * 4) { name = "PathTracerAccumulation" };
+            return true;
         }
 
         /**
@@ -133,9 +155,9 @@ namespace SpectralPathTracer
          * </summary>
          * <param name="renderGraph">The render graph recording this frame.</param>
          * <param name="frame">This frame's context.</param>
-         * <param name="radiance">The radiance texture to resolve into.</param>
+         * <param name="accumulation">The running sums to add this frame's samples to.</param>
          */
-        private void RecordWavefront(RenderGraph renderGraph, in FrameContext frame, TextureHandle radiance)
+        private void RecordWavefront(RenderGraph renderGraph, in FrameContext frame, BufferHandle accumulation)
         {
             SceneBuffers scene = _sceneCompiler.Import(renderGraph);
 
@@ -148,7 +170,7 @@ namespace SpectralPathTracer
                 _shadeStage.Record(renderGraph, frame, paths, hits, scene, depth);
             }
 
-            _resolveStage.Record(renderGraph, frame, paths, radiance);
+            _resolveStage.Record(renderGraph, frame, paths, accumulation);
         }
 
         /**

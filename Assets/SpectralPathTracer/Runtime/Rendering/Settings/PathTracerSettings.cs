@@ -33,6 +33,10 @@ namespace SpectralPathTracer
         [field: Range(0, 16)]
         [field: SerializeField] public int MaxBounces { get; private set; } = 1;
 
+        [field: Tooltip("Stop accumulating after this many samples per pixel; 0 keeps going forever.")]
+        [field: Min(0)]
+        [field: SerializeField] public int TargetSamples { get; private set; } = 1024;
+
         [field: Header("Display")]
 
         [field: Tooltip("Brightness in stops, where each +1 doubles it, 0 leaves the radiance unchanged.")]

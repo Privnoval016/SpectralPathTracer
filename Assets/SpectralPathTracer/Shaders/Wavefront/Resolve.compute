@@ -4,13 +4,15 @@
 #include "../Include/PathState.hlsl"
 
 uint _RayCount;
+uint2 _Resolution;
+uint _SampleCount;
 StructuredBuffer<GpuRay> _Rays;
 StructuredBuffer<GpuPathState> _Paths;
-RWTexture2D<float4> _Output;
+RWStructuredBuffer<float4> _Accumulation;
 
 /**
  * <summary>
- * Writes each path's gathered radiance to its pixel.
+ * Adds each path's gathered radiance to its pixel's running sum.
  * </summary>
  */
 [numthreads(64, 1, 1)]
@@ -20,5 +22,11 @@ void Resolve(uint3 id : SV_DispatchThreadID)
         return;
 
     // the ray keeps its pixel through every bounce, so it still says where this path belongs
-    _Output[LoadRay(_Rays, id.x).Pixel] = float4(LoadPath(_Paths, id.x).Radiance, 1.0f);
+    int2 pixel = LoadRay(_Rays, id.x).Pixel;
+    uint pixelIndex = pixel.x + pixel.y * _Resolution.x;
+    float3 radiance = LoadPath(_Paths, id.x).Radiance;
+
+    // the first sample after a reset overwrites whatever an older accumulation left behind
+    float3 sum = _SampleCount == 0u ? radiance : _Accumulation[pixelIndex].rgb + radiance;
+    _Accumulation[pixelIndex] = float4(sum, 1.0f);
 }

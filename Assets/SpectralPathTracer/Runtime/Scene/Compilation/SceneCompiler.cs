@@ -46,16 +46,18 @@ namespace SpectralPathTracer
          * <summary>
          * Rebuilds and uploads the scene buffers if anything changed since the last build.
          * </summary>
+         * <returns>True if the scene changed and was rebuilt this frame.</returns>
          */
-        public void Update()
+        public bool Update()
         {
             if (!HasChanged())
-                return;
+                return false;
 
             Rebuild();
             Upload();
             CacheTransforms();
             _builtVersion = TracedRegistry.Version;
+            return true;
         }
 
         /**

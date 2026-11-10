@@ -19,5 +19,6 @@ MonoBehaviour:
   <Paused>k__BackingField: 0
   <OutputResolution>k__BackingField: {x: 1920, y: 1080}
   <MaxBounces>k__BackingField: 1
-  <Exposure>k__BackingField: 0
+  <TargetSamples>k__BackingField: 256
+  <Exposure>k__BackingField: -4
   <ShowGrayRamp>k__BackingField: 0

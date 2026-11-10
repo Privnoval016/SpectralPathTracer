@@ -9,7 +9,8 @@ namespace SpectralPathTracer
 {
     /**
      * <summary>
-     * Checks the Display kernel: exposure in stops, the clamp to [0, 1], AOVs skipping exposure, and the gray ramp.
+     * Checks the Display kernel: dividing the sums by the sample count, exposure in stops, the clamp to [0, 1], AOVs
+     * skipping exposure, and the gray ramp.
      * </summary>
      */
     public class DisplayTests
@@ -30,7 +31,7 @@ namespace SpectralPathTracer
         [TestCase(-2f)]
         public void ExposureScalesInStopsThenClamps(float exposure)
         {
-            float[] outputs = Run(Mathf.Pow(2f, exposure), applyExposure: true, showGrayRamp: false);
+            float[] outputs = Run(Mathf.Pow(2f, exposure), applyExposure: true, showGrayRamp: false, sampleCount: 1);
             for (int i = 0; i < Inputs.Length; i++)
                 Assert.That(outputs[i], Is.EqualTo(Mathf.Clamp01(Inputs[i] * Mathf.Pow(2f, exposure))).Within(Tolerance), $"Input {Inputs[i]}");
         }
@@ -38,7 +39,7 @@ namespace SpectralPathTracer
         [Test]
         public void AovsSkipExposure()
         {
-            float[] outputs = Run(exposureScale: 16f, applyExposure: false, showGrayRamp: false);
+            float[] outputs = Run(exposureScale: 16f, applyExposure: false, showGrayRamp: false, sampleCount: 1);
             for (int i = 0; i < Inputs.Length; i++)
                 Assert.That(outputs[i], Is.EqualTo(Mathf.Clamp01(Inputs[i])).Within(Tolerance), $"Input {Inputs[i]}");
         }
@@ -46,41 +47,51 @@ namespace SpectralPathTracer
         [Test]
         public void GrayRampIsLinearAcrossColumns()
         {
-            float[] outputs = Run(exposureScale: 16f, applyExposure: true, showGrayRamp: true);
+            float[] outputs = Run(exposureScale: 16f, applyExposure: true, showGrayRamp: true, sampleCount: 1);
             for (int i = 0; i < Inputs.Length; i++)
                 Assert.That(outputs[i], Is.EqualTo((i + 0.5f) / Inputs.Length).Within(Tolerance), $"Column {i}");
+        }
+
+        [Test]
+        public void SumsAreDividedBySampleCount()
+        {
+            // the inputs stand for sums of 4 samples, so the displayed mean is a quarter of each
+            float[] outputs = Run(exposureScale: 1f, applyExposure: true, showGrayRamp: false, sampleCount: 4);
+            for (int i = 0; i < Inputs.Length; i++)
+                Assert.That(outputs[i], Is.EqualTo(Mathf.Clamp01(Inputs[i] / 4f)).Within(Tolerance), $"Input {Inputs[i]}");
         }
 
         #region Helpers
 
         /**
          * <summary>
-         * Runs the Display kernel on a one-row texture holding Inputs (in every color channel).
+         * Runs the Display kernel on a one-row accumulation buffer holding Inputs (in every color channel).
          * </summary>
          * <param name="exposureScale">The exposure multiplier, 2^EV.</param>
          * <param name="applyExposure">Whether exposure applies, as for the rendered image.</param>
          * <param name="showGrayRamp">Whether to show the gray ramp instead.</param>
+         * <param name="sampleCount">How many samples each input sum stands for.</param>
          * <returns>The red channel of each output texel.</returns>
          */
-        private static float[] Run(float exposureScale, bool applyExposure, bool showGrayRamp)
+        private static float[] Run(float exposureScale, bool applyExposure, bool showGrayRamp, int sampleCount)
         {
             var shader = AssetDatabase.LoadAssetAtPath<ComputeShader>(ShaderPath);
             Assert.That(shader, Is.Not.Null, $"Missing {ShaderPath}");
             int kernel = shader.FindKernel(KernelName);
 
-            var radiance = new Texture2D(Inputs.Length, 1, GraphicsFormat.R32G32B32A32_SFloat, TextureCreationFlags.None);
-            var pixels = new Color[Inputs.Length];
+            var sums = new GraphicsBuffer(GraphicsBuffer.Target.Structured, Inputs.Length, sizeof(float) * 4);
+            var values = new Vector4[Inputs.Length];
             for (int i = 0; i < Inputs.Length; i++)
-                pixels[i] = new Color(Inputs[i], Inputs[i], Inputs[i], 1f);
-            radiance.SetPixels(pixels);
-            radiance.Apply();
+                values[i] = new Vector4(Inputs[i], Inputs[i], Inputs[i], 1f);
+            sums.SetData(values);
 
             var display = new RenderTexture(Inputs.Length, 1, 0, GraphicsFormat.R32G32B32A32_SFloat) { enableRandomWrite = true };
             display.Create();
 
             try
             {
-                shader.SetTexture(kernel, ShaderIDs.RadianceID, radiance);
+                shader.SetBuffer(kernel, ShaderIDs.AccumulationID, sums);
+                shader.SetFloat(ShaderIDs.InverseSampleCountID, 1f / sampleCount);
                 shader.SetTexture(kernel, ShaderIDs.DisplayID, display);
                 shader.SetInts(ShaderIDs.ResolutionID, Inputs.Length, 1);
                 shader.SetFloat(ShaderIDs.ExposureScaleID, exposureScale);
@@ -99,7 +110,7 @@ namespace SpectralPathTracer
             }
             finally
             {
-                Object.DestroyImmediate(radiance);
+                sums.Release();
                 display.Release();
                 Object.DestroyImmediate(display);
             }
