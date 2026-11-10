@@ -73,10 +73,15 @@ void Shade(uint3 id : SV_DispatchThreadID)
             float2 u = float2(SampleUniform(pixel, _SampleIndex, BounceDimension(_Depth, SLOT_BSDF_U)),
                               SampleUniform(pixel, _SampleIndex, BounceDimension(_Depth, SLOT_BSDF_V)));
 
-            ray.Origin = OffsetRayOrigin(position, facing);
-            ray.Direction = LocalToWorld(SampleCosineHemisphere(u), facing);
             path.Throughput *= material.Albedo; // (albedo / pi) * cos / (cos / pi): the cosines and pis cancel
-            StoreRay(_Rays, id.x, ray);
+            if (any(path.Throughput > 0.0f))
+            {
+                ray.Origin = OffsetRayOrigin(position, facing);
+                ray.Direction = LocalToWorld(SampleCosineHemisphere(u), facing);
+                StoreRay(_Rays, id.x, ray);
+            }
+            else
+                path.Active = 0u; // nothing found later can add light
         }
         else
             path.Active = 0u;

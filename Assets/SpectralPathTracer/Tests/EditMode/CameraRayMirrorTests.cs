@@ -20,6 +20,7 @@ namespace SpectralPathTracer
         private const int Width = 16;
         private const int Height = 9;
         private const float Tolerance = 1e-5f;
+        private const float JitterTolerance = 1e-3f; // in pixels
 
         #endregion
 
@@ -33,7 +34,7 @@ namespace SpectralPathTracer
             Matrix4x4 cameraToWorld = Matrix4x4.TRS(new Vector3(1f, 2f, 3f), Quaternion.Euler(10f, 30f, 0f), Vector3.one);
             var camera = new PinholeCamera(cameraToWorld, Mathf.Tan(30f * Mathf.Deg2Rad), (float)Width / Height);
 
-            GpuRay[] rays = DispatchGenerate(shader, camera);
+            GpuRay[] rays = DispatchGenerate(shader, camera, pixelJitter: false);
 
             for (int i = 0; i < rays.Length; i++)
             {
@@ -46,6 +47,40 @@ namespace SpectralPathTracer
             }
         }
 
+        [Test]
+        public void JitteredDirectionsStayInsideTheirPixel()
+        {
+            var shader = AssetDatabase.LoadAssetAtPath<ComputeShader>(GenerateShaderPath);
+            Assert.That(shader, Is.Not.Null, $"Missing {GenerateShaderPath}");
+
+            Matrix4x4 cameraToWorld = Matrix4x4.TRS(new Vector3(1f, 2f, 3f), Quaternion.Euler(10f, 30f, 0f), Vector3.one);
+            var camera = new PinholeCamera(cameraToWorld, Mathf.Tan(30f * Mathf.Deg2Rad), (float)Width / Height);
+            Matrix4x4 worldToCamera = cameraToWorld.inverse;
+
+            GpuRay[] rays = DispatchGenerate(shader, camera, pixelJitter: true);
+
+            int offCenter = 0;
+            for (int i = 0; i < rays.Length; i++)
+            {
+                int x = i % Width;
+                int y = i / Width;
+
+                // back into image coordinates: divide by the depth along the camera's axis, then undo the FOV and aspect scale
+                Vector3 d = worldToCamera.MultiplyVector(rays[i].Direction);
+                float pixelX = ((d.x / d.z) / (camera.TanHalfFov * camera.AspectRatio) * 0.5f + 0.5f) * Width;
+                float pixelY = ((d.y / d.z) / camera.TanHalfFov * 0.5f + 0.5f) * Height;
+
+                Assert.That(pixelX, Is.InRange(x - JitterTolerance, x + 1 + JitterTolerance), $"Ray {i} left its pixel in x: {pixelX}");
+                Assert.That(pixelY, Is.InRange(y - JitterTolerance, y + 1 + JitterTolerance), $"Ray {i} left its pixel in y: {pixelY}");
+
+                if (Mathf.Abs(pixelX - (x + 0.5f)) > 0.1f || Mathf.Abs(pixelY - (y + 0.5f)) > 0.1f)
+                    offCenter++;
+            }
+
+            // with uniform jitter about 96% of rays land more than a tenth of a pixel from the center in some axis
+            Assert.That(offCenter, Is.GreaterThan(rays.Length / 2), "Jitter left most rays at the pixel center");
+        }
+
         #region Helpers
 
         /**
@@ -54,9 +89,10 @@ namespace SpectralPathTracer
          * </summary>
          * <param name="shader">The Generate compute shader.</param>
          * <param name="camera">The camera to generate rays for.</param>
+         * <param name="pixelJitter">Whether rays start at random spots inside their pixels instead of the centers.</param>
          * <returns>The generated rays.</returns>
          */
-        private static GpuRay[] DispatchGenerate(ComputeShader shader, PinholeCamera camera)
+        private static GpuRay[] DispatchGenerate(ComputeShader shader, PinholeCamera camera, bool pixelJitter)
         {
             int kernel = shader.FindKernel(GenerateKernelName);
             using var rays = new GraphicsBuffer(GraphicsBuffer.Target.Structured, Width * Height, UnsafeUtility.SizeOf<GpuRay>());
@@ -69,6 +105,9 @@ namespace SpectralPathTracer
             shader.SetMatrix(ShaderIDs.CameraToWorldID, camera.CameraToWorld);
             shader.SetFloat(ShaderIDs.TanHalfFovYID, camera.TanHalfFov);
             shader.SetFloat(ShaderIDs.AspectRatioID, camera.AspectRatio);
+            shader.SetInt(ShaderIDs.PixelJitterID, pixelJitter ? 1 : 0);
+            shader.SetInt(ShaderIDs.SampleIndexID, 0);
+            shader.SetVector(ShaderIDs.OutputScaleID, Vector2.one);
 
             shader.GetKernelThreadGroupSizes(kernel, out uint groupSizeX, out uint groupSizeY, out _);
             shader.Dispatch(kernel, (Width + (int)groupSizeX - 1) / (int)groupSizeX, (Height + (int)groupSizeY - 1) / (int)groupSizeY, 1);

@@ -24,6 +24,9 @@ namespace SpectralPathTracer
             public int GroupsY;
 
             public PinholeCamera Camera;
+            public uint SampleIndex;
+            public Vector2 OutputScale;
+            public int PixelJitter;
         }
 
         public GenerateStage(ComputeShader shader) : base(shader, KernelName)
@@ -58,6 +61,9 @@ namespace SpectralPathTracer
             passData.GroupsY = GroupCount(frame.RenderSize.y, GroupSizeY);
 
             passData.Camera = frame.Camera;
+            passData.SampleIndex = frame.SampleIndex;
+            passData.OutputScale = frame.OutputScale;
+            passData.PixelJitter = frame.PixelJitter ? 1 : 0;
 
             builder.UseBuffer(rays, AccessFlags.Write);
             builder.UseBuffer(paths, AccessFlags.Write);
@@ -70,6 +76,8 @@ namespace SpectralPathTracer
                 cmd.SetComputeBufferParam(data.Shader, data.Kernel, ShaderIDs.PathsID, data.Paths);
                 cmd.SetComputeIntParams(data.Shader, ShaderIDs.ResolutionID, data.Resolution);
                 SetCamera(cmd, data.Shader, data.Camera);
+                SetSampler(cmd, data.Shader, data.SampleIndex, data.OutputScale);
+                cmd.SetComputeIntParam(data.Shader, ShaderIDs.PixelJitterID, data.PixelJitter);
                 cmd.DispatchCompute(data.Shader, data.Kernel, data.GroupsX, data.GroupsY, 1);
             });
 

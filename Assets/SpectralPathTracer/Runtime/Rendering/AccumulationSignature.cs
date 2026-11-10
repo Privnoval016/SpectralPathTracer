@@ -18,6 +18,7 @@ namespace SpectralPathTracer
         private readonly float _aspectRatio;
         private readonly Vector2Int _renderSize;
         private readonly int _maxBounces;
+        private readonly bool _pixelJitter;
         private readonly SkyColors _sky;
         private readonly Aov _aov;
         private readonly Vector2 _depthRange;
@@ -25,13 +26,14 @@ namespace SpectralPathTracer
 
         #endregion
 
-        public AccumulationSignature(PinholeCamera camera, Vector2Int renderSize, int maxBounces, SkyColors sky, AovSettings aovSettings)
+        public AccumulationSignature(PinholeCamera camera, Vector2Int renderSize, int maxBounces, bool pixelJitter, SkyColors sky, AovSettings aovSettings)
         {
             _cameraToWorld = camera.CameraToWorld;
             _tanHalfFov = camera.TanHalfFov;
             _aspectRatio = camera.AspectRatio;
             _renderSize = renderSize;
             _maxBounces = maxBounces;
+            _pixelJitter = pixelJitter;
             _sky = sky;
             _aov = aovSettings.Aov;
             _depthRange = new Vector2(aovSettings.DepthNear, aovSettings.DepthFar);
@@ -45,6 +47,7 @@ namespace SpectralPathTracer
                 && _aspectRatio == other._aspectRatio
                 && _renderSize == other._renderSize
                 && _maxBounces == other._maxBounces
+                && _pixelJitter == other._pixelJitter
                 && _sky.Zenith == other._sky.Zenith
                 && _sky.Horizon == other._sky.Horizon
                 && _sky.Ground == other._sky.Ground

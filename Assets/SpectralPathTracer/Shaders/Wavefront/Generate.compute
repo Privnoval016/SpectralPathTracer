@@ -3,8 +3,10 @@
 #include "../Include/Camera.hlsl"
 #include "../Include/Rays.hlsl"
 #include "../Include/PathState.hlsl"
+#include "../Include/Sampler.hlsl"
 
 uint2 _Resolution;
+uint _PixelJitter;
 RWStructuredBuffer<GpuRay> _Rays;
 RWStructuredBuffer<GpuPathState> _Paths;
 
@@ -19,7 +21,16 @@ void Generate(uint3 id : SV_DispatchThreadID)
     if (any(id.xy >= _Resolution))
         return;
 
-    float2 uv = (float2(id.xy) + 0.5f) / float2(_Resolution);
+    // a random spot inside the pixel each sample, so the accumulated average covers the whole pixel and edges come out smooth
+    float2 jitter = float2(0.5f, 0.5f);
+    if (_PixelJitter != 0u)
+    {
+        uint2 outputPixel = OutputPixel(int2(id.xy));
+        jitter = float2(SampleUniform(outputPixel, _SampleIndex, DIMENSION_PIXEL_JITTER_X),
+                        SampleUniform(outputPixel, _SampleIndex, DIMENSION_PIXEL_JITTER_Y));
+    }
+
+    float2 uv = (float2(id.xy) + jitter) / float2(_Resolution);
 
     GpuRay ray;
     ray.Origin = CameraRayOrigin();
