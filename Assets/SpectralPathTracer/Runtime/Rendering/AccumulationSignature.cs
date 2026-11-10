@@ -18,6 +18,7 @@ namespace SpectralPathTracer
         private readonly Vector2Int _renderSize;
         private readonly int _maxBounces;
         private readonly bool _pixelJitter;
+        private readonly bool _russianRoulette;
         private readonly SkyColors _sky;
         private readonly Aov _aov;
         private readonly Vector2 _depthRange;
@@ -25,7 +26,7 @@ namespace SpectralPathTracer
 
         #endregion
 
-        public AccumulationSignature(PinholeCamera camera, Vector2Int renderSize, int maxBounces, bool pixelJitter, SkyColors sky, AovSettings aovSettings)
+        public AccumulationSignature(PinholeCamera camera, Vector2Int renderSize, int maxBounces, bool pixelJitter, bool russianRoulette, SkyColors sky, AovSettings aovSettings)
         {
             _cameraToWorld = camera.CameraToWorld;
             _tanHalfFov = camera.TanHalfFov;
@@ -33,6 +34,7 @@ namespace SpectralPathTracer
             _renderSize = renderSize;
             _maxBounces = maxBounces;
             _pixelJitter = pixelJitter;
+            _russianRoulette = russianRoulette;
             _sky = sky;
             _aov = aovSettings.Aov;
             _depthRange = new Vector2(aovSettings.DepthNear, aovSettings.DepthFar);
@@ -47,6 +49,7 @@ namespace SpectralPathTracer
                 && _renderSize == other._renderSize
                 && _maxBounces == other._maxBounces
                 && _pixelJitter == other._pixelJitter
+                && _russianRoulette == other._russianRoulette
                 && _sky.Zenith == other._sky.Zenith
                 && _sky.Horizon == other._sky.Horizon
                 && _sky.Ground == other._sky.Ground

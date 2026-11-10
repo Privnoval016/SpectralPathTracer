@@ -32,10 +32,11 @@ namespace SpectralPathTracer
         public float Exposure { get; }
         public bool ShowGrayRamp { get; }
         public bool PixelJitter { get; }
+        public bool RussianRoulette { get; }
 
         #endregion
 
-        public FrameContext(Vector2Int renderSize, Vector2Int outputSize, uint sampleIndex, int maxBounces, PinholeCamera camera, SkyColors sky, Aov aov, Vector2 depthRange, int noiseDimension, float exposure, bool showGrayRamp, bool pixelJitter)
+        public FrameContext(Vector2Int renderSize, Vector2Int outputSize, uint sampleIndex, int maxBounces, PinholeCamera camera, SkyColors sky, Aov aov, Vector2 depthRange, int noiseDimension, float exposure, bool showGrayRamp, bool pixelJitter, bool russianRoulette)
         {
             RenderSize = renderSize;
             OutputSize = outputSize;
@@ -49,6 +50,7 @@ namespace SpectralPathTracer
             Exposure = exposure;
             ShowGrayRamp = showGrayRamp;
             PixelJitter = pixelJitter;
+            RussianRoulette = russianRoulette;
         }
     }
 }

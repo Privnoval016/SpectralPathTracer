@@ -17,6 +17,7 @@
 
 uint _Depth;
 uint _MaxBounces;
+uint _RussianRoulette;
 RWStructuredBuffer<GpuRay> _Rays;
 StructuredBuffer<GpuHit> _Hits;
 StructuredBuffer<GpuObject> _Objects;
@@ -85,8 +86,20 @@ void Shade(uint3 id : SV_DispatchThreadID)
             float2 u = float2(SampleUniform(pixel, _SampleIndex, BounceDimension(_Depth, SLOT_BSDF_U)),
                               SampleUniform(pixel, _SampleIndex, BounceDimension(_Depth, SLOT_BSDF_V)));
 
-            path.Throughput.rgb *= material.Albedo; // f cos / pdf for a Lambertian surface is just the albedo
-            if (any(path.Throughput.rgb > 0.0f))
+            path.Throughput.rgb *= material.Albedo; // f cos / pdf for a Lambertian surface is the albedo
+
+            bool continues = any(path.Throughput.rgb > 0.0f);
+
+
+            float largestLane = max(path.Throughput.r, max(path.Throughput.g, path.Throughput.b));
+            
+            if (continues && _RussianRoulette != 0u && _Depth >= 1u && largestLane < 1.0f)
+            {
+                continues = SampleUniform(pixel, _SampleIndex, BounceDimension(_Depth, SLOT_RUSSIAN_ROULETTE)) < largestLane;
+                path.Throughput.rgb /= largestLane; // throughput scaling to be unbiased
+            }
+
+            if (continues)
             {
                 ray.Origin = OffsetRayOrigin(position, facing);
                 ray.Direction = LocalToWorld(SampleCosineHemisphere(u), facing);
@@ -98,7 +111,7 @@ void Shade(uint3 id : SV_DispatchThreadID)
                 _QueueOut[queuePosition] = slot;
             }
             else
-                Finish(path); // nothing found later can add light
+                Finish(path); // out of light, or stopped by roulette
         }
         else
             Finish(path);

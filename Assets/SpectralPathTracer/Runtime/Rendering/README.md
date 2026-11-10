@@ -15,7 +15,7 @@ flowchart TD
     subgraph WAVE["GPU, for each wave of up to 2^18 paths"]
         gen["Generate<br/>camera ray and path state per slot,<br/>queue A = every slot"]
         isect["Intersect<br/>nearest hit for each queued path"]
-        shade["Shade<br/>add light, sample the bounce,<br/>append survivors to the other queue"]
+        shade["Shade<br/>add light, sample the bounce,<br/>Russian roulette from depth 1,<br/>append survivors to the other queue"]
         more{"another bounce?"}
         args["Args<br/>survivor count becomes the next dispatch size"]
         resolve["Resolve<br/>add every path's radiance to its pixel's sum"]
@@ -44,7 +44,7 @@ flowchart TD
 
 - **Waves.** Path memory is sized for $2^{18}$ slots, not for the image. A frame runs as many waves as it needs to give every
   pixel one sample (two at Edit Mode's 960 by 540).
-- **Queues.** Paths die at different bounces. Shade appends the survivors to a fresh queue with an atomic add, so the next
+- **Queues.** Paths die at different bounces (escaping, or stopped by Russian roulette). Shade appends the survivors to a fresh queue with an atomic add, so the next
   Intersect and Shade only launch threads for live paths. Two queues swap roles every bounce so no kernel reads and appends
   the same list.
 - **Indirect dispatch.** The survivor count only exists on the GPU. The one-thread Args kernel turns it into the next

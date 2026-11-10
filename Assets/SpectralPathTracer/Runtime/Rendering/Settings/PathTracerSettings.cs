@@ -31,7 +31,10 @@ namespace SpectralPathTracer
 
         [field: Tooltip("How many times a path may bounce after the camera ray's first hit.")]
         [field: Range(0, 16)]
-        [field: SerializeField] public int MaxBounces { get; private set; } = 4;
+        [field: SerializeField] public int MaxBounces { get; private set; } = 16;
+
+        [field: Tooltip("End dim paths at random and boost the survivors, so long paths cost less without darkening the image.")]
+        [field: SerializeField] public bool RussianRoulette { get; private set; } = true;
 
         [field: Tooltip("Place each sample at a random spot inside its pixel, which anti-aliases edges as samples accumulate.")]
         [field: SerializeField] public bool PixelJitter { get; private set; } = true;

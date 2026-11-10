@@ -16,8 +16,11 @@ static const uint DIMENSION_PIXEL_JITTER_Y = 1u;
 
 static const uint DIMENSION_BOUNCE_BASE = 2u; // each bounce uses 2 dimensions (u, v)
 static const uint DIMENSIONS_PER_BOUNCE = 16u;
+
+// mapping slots so each of these get its own dimension in the hash function, so the dimensions are consistent across bounces and kernels
 static const uint SLOT_BSDF_U = 0u;
 static const uint SLOT_BSDF_V = 1u;
+static const uint SLOT_RUSSIAN_ROULETTE = 2u;
 
 uint BounceDimension(uint depth, uint slot)
 {

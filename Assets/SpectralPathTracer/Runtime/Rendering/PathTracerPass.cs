@@ -84,7 +84,7 @@ namespace SpectralPathTracer
             bool accumulating = !_settings.Paused && (_settings.TargetSamples == 0 || _sampleCount < _settings.TargetSamples);
 
             var depthRange = new Vector2(_aovSettings.DepthNear, _aovSettings.DepthFar);
-            var frame = new FrameContext(renderSize, _settings.OutputResolution, _sampleCount, _settings.MaxBounces, camera, skyColors, _aovSettings.Aov, depthRange, _aovSettings.NoiseDimension, _settings.Exposure, _settings.ShowGrayRamp, _settings.PixelJitter);
+            var frame = new FrameContext(renderSize, _settings.OutputResolution, _sampleCount, _settings.MaxBounces, camera, skyColors, _aovSettings.Aov, depthRange, _aovSettings.NoiseDimension, _settings.Exposure, _settings.ShowGrayRamp, _settings.PixelJitter, _settings.RussianRoulette);
 
             BufferHandle accumulation = renderGraph.ImportBuffer(_accumulation);
             if (accumulating)
@@ -127,7 +127,7 @@ namespace SpectralPathTracer
         {
             bool resized = EnsureAccumulationBuffer(renderSize);
             bool sceneChanged = _sceneCompiler.Update();
-            var signature = new AccumulationSignature(camera, renderSize, _settings.MaxBounces, _settings.PixelJitter, sky, _aovSettings);
+            var signature = new AccumulationSignature(camera, renderSize, _settings.MaxBounces, _settings.PixelJitter, _settings.RussianRoulette, sky, _aovSettings);
 
             if (resized || sceneChanged || !signature.Equals(_signature))
             {

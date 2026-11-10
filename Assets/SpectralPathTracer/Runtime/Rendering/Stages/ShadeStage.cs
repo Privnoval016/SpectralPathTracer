@@ -21,6 +21,7 @@ namespace SpectralPathTracer
             public BufferHandle Paths;
             public int Depth;
             public int MaxBounces;
+            public int RussianRoulette;
             public BufferHandle QueueIn;
             public BufferHandle QueueOut;
             public BufferHandle Counters;
@@ -67,6 +68,7 @@ namespace SpectralPathTracer
             passData.Paths = paths.Paths;
             passData.Depth = depth;
             passData.MaxBounces = frame.MaxBounces;
+            passData.RussianRoulette = frame.RussianRoulette ? 1 : 0;
             passData.QueueIn = paths.QueueIn(depth);
             passData.QueueOut = paths.QueueOut(depth);
             passData.Counters = paths.Counters;
@@ -105,6 +107,7 @@ namespace SpectralPathTracer
                 cmd.SetComputeBufferParam(data.Shader, data.Kernel, ShaderIDs.PathsID, data.Paths);
                 cmd.SetComputeIntParam(data.Shader, ShaderIDs.DepthID, data.Depth);
                 cmd.SetComputeIntParam(data.Shader, ShaderIDs.MaxBouncesID, data.MaxBounces);
+                cmd.SetComputeIntParam(data.Shader, ShaderIDs.RussianRouletteID, data.RussianRoulette);
                 cmd.SetComputeBufferParam(data.Shader, data.Kernel, ShaderIDs.QueueInID, data.QueueIn);
                 cmd.SetComputeBufferParam(data.Shader, data.Kernel, ShaderIDs.QueueOutID, data.QueueOut);
                 cmd.SetComputeBufferParam(data.Shader, data.Kernel, ShaderIDs.CountersID, data.Counters);
