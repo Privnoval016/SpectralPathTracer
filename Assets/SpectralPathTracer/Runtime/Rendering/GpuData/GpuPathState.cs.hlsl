@@ -8,9 +8,17 @@
 // PackingRules = Exact
 struct GpuPathState
 {
-    float3 Radiance;
-    float3 Throughput;
-    uint Active;
+    float4 Radiance;
+    float4 Throughput;
+    float4 Wavelengths;
+    float4 WavelengthPdfs;
+    float4 Time;
+    float4 MisVc;
+    float4 MisVcm;
+    uint PixelIndex;
+    uint Flags;
+    uint MediumId;
+    uint Reserved;
 };
 
 

@@ -1,0 +1,21 @@
+#pragma kernel Args
+
+#include "../Include/Queues.hlsl"
+
+uint _QueueInOffset;
+uint _QueueOutOffset;
+RWByteAddressBuffer _Counters;
+RWByteAddressBuffer _Args;
+
+/**
+ * <summary>
+ * Sizes the next bounce's dispatch from the queue Shade filled, and empties the queue it read.
+ * </summary>
+ */
+[numthreads(1, 1, 1)]
+void Args(uint3 id : SV_DispatchThreadID)
+{
+    uint count = _Counters.Load(_QueueOutOffset);
+    _Args.Store3(0u, uint3(QueueGroups(count), 1u, 1u));
+    _Counters.Store(_QueueInOffset, 0u);
+}

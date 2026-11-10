@@ -7,8 +7,7 @@ namespace SpectralPathTracer
 {
     /**
      * <summary>
-     * Keeps the Game view rendering in Edit Mode while samples are still accumulating; Edit Mode otherwise only
-     * renders when something changes.
+     * Repaints the Game view in Edit Mode while samples are still accumulating.
      * </summary>
      */
     [InitializeOnLoad]
@@ -32,7 +31,7 @@ namespace SpectralPathTracer
             if (Application.isPlaying || !AccumulationProgress.IsAccumulating || GameViewType == null)
                 return;
 
-            // queuing a player loop update doesn't redraw the Game view, so repaint its windows directly
+            // QueuePlayerLoopUpdate doesn't redraw the Game view
             foreach (Object view in Resources.FindObjectsOfTypeAll(GameViewType))
                 ((EditorWindow)view).Repaint();
         }

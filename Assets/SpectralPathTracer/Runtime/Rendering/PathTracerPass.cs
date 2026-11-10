@@ -11,6 +11,9 @@ namespace SpectralPathTracer
     {
         #region Private Fields
 
+        // path slots per wave, so the wavefront stages can be dispatched in parallel
+        private const int WaveSize = 1 << 18;
+
         private readonly PathTracerSettings _settings;
         private readonly AovSettings _aovSettings;
 
@@ -18,6 +21,7 @@ namespace SpectralPathTracer
         private readonly IntersectStage _intersectStage;
         private readonly ShadeStage _shadeStage;
         private readonly ResolveStage _resolveStage;
+        private readonly ArgsStage _argsStage;
         private readonly DisplayStage _displayStage;
         private readonly PresentStage _presentStage;
 
@@ -48,6 +52,7 @@ namespace SpectralPathTracer
             _intersectStage = new IntersectStage(shaders.Intersect);
             _shadeStage = new ShadeStage(shaders.Shade);
             _resolveStage = new ResolveStage(shaders.Resolve);
+            _argsStage = new ArgsStage(shaders.Args);
             _displayStage = new DisplayStage(shaders.Display);
             _presentStage = new PresentStage();
 
@@ -90,7 +95,7 @@ namespace SpectralPathTracer
 
             AccumulationProgress.Report((int)_sampleCount, _settings.TargetSamples, accumulating);
 
-            // the display transform runs even while paused, so exposure can be adjusted on a frozen image
+            // runs even while paused, so exposure works on a frozen image
             TextureHandle display = _displayStage.Record(renderGraph, frame, accumulation, (int)_sampleCount);
             _presentStage.Record(renderGraph, display, resourceData.activeColorTexture, cameraDesc, _settings.OutputResolution);
         }
@@ -112,7 +117,7 @@ namespace SpectralPathTracer
         /**
          * <summary>
          * Restarts the running sums when anything upstream of them changed: the scene, the camera, the render size
-         * or any setting that changes the rendered image. Exposure isn't one of them; it applies after the average.
+         * or any setting that changes the rendered image. Exposure applies after the average.
          * </summary>
          * <param name="camera">This frame's camera.</param>
          * <param name="renderSize">The size to render at this frame.</param>
@@ -133,7 +138,7 @@ namespace SpectralPathTracer
 
         /**
          * <summary>
-         * Makes sure the accumulation buffer holds one float4 sum per pixel, reallocating it when the render size changes.
+         * Ensures that the accumulation buffer holds one float4 sum per pixel, reallocating it when the render size changes.
          * </summary>
          * <param name="renderSize">The size to render at this frame.</param>
          * <returns>True if the buffer was reallocated, so its contents are undefined.</returns>
@@ -151,7 +156,7 @@ namespace SpectralPathTracer
 
         /**
          * <summary>
-         * Records the wavefront stages: generate camera rays, intersect and shade once per bounce, then resolve every path into the output.
+         * Records every wave: generate camera rays, intersect and shade once per bounce, then resolve into the sums.
          * </summary>
          * <param name="renderGraph">The render graph recording this frame.</param>
          * <param name="frame">This frame's context.</param>
@@ -161,16 +166,24 @@ namespace SpectralPathTracer
         {
             SceneBuffers scene = _sceneCompiler.Import(renderGraph);
 
-            PathBuffers paths = _generateStage.Record(renderGraph, frame);
-
-            // depth 0 is the camera ray's hit, so MaxBounces bounces need MaxBounces + 1 trips around the loop
-            for (int depth = 0; depth <= frame.MaxBounces; depth++)
+            for (int waveStart = 0; waveStart < frame.PixelCount; waveStart += WaveSize)
             {
-                BufferHandle hits = _intersectStage.Record(renderGraph, frame, paths, scene);
-                _shadeStage.Record(renderGraph, frame, paths, hits, scene, depth);
-            }
+                int waveCount = Mathf.Min(WaveSize, frame.PixelCount - waveStart);
+                PathBuffers paths = _generateStage.Record(renderGraph, frame, waveStart, waveCount);
 
-            _resolveStage.Record(renderGraph, frame, paths, accumulation);
+                // depth 0 is the camera ray's hit, so N bounces take N + 1 passes
+                for (int depth = 0; depth <= frame.MaxBounces; depth++)
+                {
+                    BufferHandle hits = _intersectStage.Record(renderGraph, frame, paths, scene, depth);
+                    _shadeStage.Record(renderGraph, frame, paths, hits, scene, depth);
+
+                    // only the live paths Shade queued get dispatched next, so after the last bounce nothing needs to read the queue
+                    if (depth < frame.MaxBounces)
+                        _argsStage.Record(renderGraph, paths, depth);
+                }
+
+                _resolveStage.Record(renderGraph, frame, paths, accumulation);
+            }
         }
 
         /**

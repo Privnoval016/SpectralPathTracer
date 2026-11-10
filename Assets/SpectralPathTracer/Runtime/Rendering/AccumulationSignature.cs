@@ -5,8 +5,7 @@ namespace SpectralPathTracer
 {
     /**
      * <summary>
-     * Everything upstream of the accumulated radiance that isn't part of the scene. Two frames with equal signatures
-     * render the same image, so their samples can be averaged; any difference means the sum has to restart.
+     * Everything outside the scene that changes the rendered image. A different signature restarts the sums.
      * </summary>
      */
     public readonly struct AccumulationSignature : IEquatable<AccumulationSignature>
@@ -63,7 +62,7 @@ namespace SpectralPathTracer
 
         public override int GetHashCode()
         {
-            // equal signatures still hash equally when some fields are left out
+            // a hash may skip fields; equal signatures still match
             return HashCode.Combine(_cameraToWorld, _renderSize, _maxBounces, _aov);
         }
     }

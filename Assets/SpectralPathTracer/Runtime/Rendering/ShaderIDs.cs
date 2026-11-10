@@ -14,6 +14,13 @@ namespace SpectralPathTracer
         public static readonly int ShowGrayRampID = Shader.PropertyToID("_ShowGrayRamp");
         public static readonly int ResolutionID = Shader.PropertyToID("_Resolution");
         public static readonly int RayCountID = Shader.PropertyToID("_RayCount");
+        public static readonly int WaveStartID = Shader.PropertyToID("_WaveStart");
+        public static readonly int QueueInID = Shader.PropertyToID("_QueueIn");
+        public static readonly int QueueOutID = Shader.PropertyToID("_QueueOut");
+        public static readonly int CountersID = Shader.PropertyToID("_Counters");
+        public static readonly int ArgsID = Shader.PropertyToID("_Args");
+        public static readonly int QueueInOffsetID = Shader.PropertyToID("_QueueInOffset");
+        public static readonly int QueueOutOffsetID = Shader.PropertyToID("_QueueOutOffset");
 
         public static readonly int RaysID = Shader.PropertyToID("_Rays");
         public static readonly int HitsID = Shader.PropertyToID("_Hits");

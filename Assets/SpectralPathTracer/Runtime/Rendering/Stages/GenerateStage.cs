@@ -19,9 +19,13 @@ namespace SpectralPathTracer
             public int Kernel;
             public BufferHandle Rays;
             public BufferHandle Paths;
+            public BufferHandle QueueA;
+            public BufferHandle Counters;
+            public BufferHandle Args;
             public readonly int[] Resolution = new int[2];
-            public int GroupsX;
-            public int GroupsY;
+            public int WaveStart;
+            public int RayCount;
+            public int Groups;
 
             public PinholeCamera Camera;
             public uint SampleIndex;
@@ -35,19 +39,32 @@ namespace SpectralPathTracer
 
         /**
          * <summary>
-         * Records the pass that writes one camera ray per pixel and starts its path.
+         * Records the pass that writes one camera ray per path slot in a wave and starts its path.
          * </summary>
          * <param name="renderGraph">The render graph recording this frame.</param>
          * <param name="frame">This frame's context.</param>
+         * <param name="waveStart">The first pixel the wave covers.</param>
+         * <param name="count">How many pixels, and so path slots, the wave covers.</param>
          * <returns>The ray and path buffers, valid for this frame's render graph.</returns>
          */
-        public PathBuffers Record(RenderGraph renderGraph, in FrameContext frame)
+        public PathBuffers Record(RenderGraph renderGraph, in FrameContext frame, int waveStart, int count)
         {
-            var desc = new BufferDesc(frame.RayCount, UnsafeUtility.SizeOf<GpuRay>(), GraphicsBuffer.Target.Structured) { name = "PathTracerRays" };
+            var desc = new BufferDesc(count, UnsafeUtility.SizeOf<GpuRay>(), GraphicsBuffer.Target.Structured) { name = "PathTracerRays" };
             BufferHandle rays = renderGraph.CreateBuffer(desc);
 
-            var pathDesc = new BufferDesc(frame.RayCount, UnsafeUtility.SizeOf<GpuPathState>(), GraphicsBuffer.Target.Structured) { name = "PathTracerPaths" };
+            var pathDesc = new BufferDesc(count, UnsafeUtility.SizeOf<GpuPathState>(), GraphicsBuffer.Target.Structured) { name = "PathTracerPaths" };
             BufferHandle paths = renderGraph.CreateBuffer(pathDesc);
+
+            var queueDesc = new BufferDesc(count, sizeof(uint), GraphicsBuffer.Target.Structured) { name = "PathTracerQueueA" };
+            BufferHandle queueA = renderGraph.CreateBuffer(queueDesc);
+            queueDesc.name = "PathTracerQueueB";
+            BufferHandle queueB = renderGraph.CreateBuffer(queueDesc);
+
+            // raw buffers, since DX12 won't take indirect args or atomics from structured ones
+            var counterDesc = new BufferDesc(2, sizeof(uint), GraphicsBuffer.Target.Raw) { name = "PathTracerQueueCounters" };
+            BufferHandle counters = renderGraph.CreateBuffer(counterDesc);
+            var argsDesc = new BufferDesc(3, sizeof(uint), GraphicsBuffer.Target.IndirectArguments | GraphicsBuffer.Target.Raw) { name = "PathTracerDispatchArgs" };
+            BufferHandle args = renderGraph.CreateBuffer(argsDesc);
 
             using var builder = renderGraph.AddComputePass("Path Tracer: Generate", out PassData passData);
 
@@ -55,10 +72,14 @@ namespace SpectralPathTracer
             passData.Kernel = Kernel;
             passData.Rays = rays;
             passData.Paths = paths;
+            passData.QueueA = queueA;
+            passData.Counters = counters;
+            passData.Args = args;
             passData.Resolution[0] = frame.RenderSize.x;
             passData.Resolution[1] = frame.RenderSize.y;
-            passData.GroupsX = GroupCount(frame.RenderSize.x, GroupSizeX);
-            passData.GroupsY = GroupCount(frame.RenderSize.y, GroupSizeY);
+            passData.WaveStart = waveStart;
+            passData.RayCount = count;
+            passData.Groups = GroupCount(count, GroupSizeX);
 
             passData.Camera = frame.Camera;
             passData.SampleIndex = frame.SampleIndex;
@@ -67,6 +88,9 @@ namespace SpectralPathTracer
 
             builder.UseBuffer(rays, AccessFlags.Write);
             builder.UseBuffer(paths, AccessFlags.Write);
+            builder.UseBuffer(queueA, AccessFlags.Write);
+            builder.UseBuffer(counters, AccessFlags.Write);
+            builder.UseBuffer(args, AccessFlags.Write);
 
             // static to reject captured variables from the outer scope
             builder.SetRenderFunc(static (PassData data, ComputeGraphContext context) =>
@@ -74,14 +98,19 @@ namespace SpectralPathTracer
                 var cmd = context.cmd;
                 cmd.SetComputeBufferParam(data.Shader, data.Kernel, ShaderIDs.RaysID, data.Rays);
                 cmd.SetComputeBufferParam(data.Shader, data.Kernel, ShaderIDs.PathsID, data.Paths);
+                cmd.SetComputeBufferParam(data.Shader, data.Kernel, ShaderIDs.QueueOutID, data.QueueA);
+                cmd.SetComputeBufferParam(data.Shader, data.Kernel, ShaderIDs.CountersID, data.Counters);
+                cmd.SetComputeBufferParam(data.Shader, data.Kernel, ShaderIDs.ArgsID, data.Args);
                 cmd.SetComputeIntParams(data.Shader, ShaderIDs.ResolutionID, data.Resolution);
+                cmd.SetComputeIntParam(data.Shader, ShaderIDs.WaveStartID, data.WaveStart);
+                cmd.SetComputeIntParam(data.Shader, ShaderIDs.RayCountID, data.RayCount);
                 SetCamera(cmd, data.Shader, data.Camera);
                 SetSampler(cmd, data.Shader, data.SampleIndex, data.OutputScale);
                 cmd.SetComputeIntParam(data.Shader, ShaderIDs.PixelJitterID, data.PixelJitter);
-                cmd.DispatchCompute(data.Shader, data.Kernel, data.GroupsX, data.GroupsY, 1);
+                cmd.DispatchCompute(data.Shader, data.Kernel, data.Groups, 1, 1);
             });
 
-            return new PathBuffers(rays, paths);
+            return new PathBuffers(rays, paths, waveStart, count, queueA, queueB, counters, args);
         }
     }
 }

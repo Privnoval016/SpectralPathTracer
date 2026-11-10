@@ -18,10 +18,11 @@ namespace SpectralPathTracer
             public ComputeShader Shader;
             public int Kernel;
             public BufferHandle Rays;
-            public BufferHandle Paths;
             public BufferHandle Hits;
-            public int RayCount;
-            public int Groups;
+            public BufferHandle QueueIn;
+            public BufferHandle Counters;
+            public BufferHandle Args;
+            public int QueueInOffset;
 
             public BufferHandle Objects;
             public int ObjectCount;
@@ -33,17 +34,18 @@ namespace SpectralPathTracer
 
         /**
          * <summary>
-         * Records the pass that finds where each ray hits the scene.
+         * Records the pass that finds where each queued path's ray hits the scene, sized on the GPU by indirect dispatch.
          * </summary>
          * <param name="renderGraph">The render graph recording this frame.</param>
          * <param name="frame">This frame's context.</param>
-         * <param name="paths">The rays to trace and their path states.</param>
+         * <param name="paths">The wave's rays and queues.</param>
          * <param name="scene">The scene's object buffer, imported this frame.</param>
-         * <returns>The hit buffer, one hit per ray, valid for this frame's render graph.</returns>
+         * <param name="depth">The bounce depth, which picks the queue to read.</param>
+         * <returns>The hit buffer, one entry per path slot, valid for this frame's render graph.</returns>
          */
-        public BufferHandle Record(RenderGraph renderGraph, in FrameContext frame, in PathBuffers paths, in SceneBuffers scene)
+        public BufferHandle Record(RenderGraph renderGraph, in FrameContext frame, in PathBuffers paths, in SceneBuffers scene, int depth)
         {
-            var desc = new BufferDesc(frame.RayCount, UnsafeUtility.SizeOf<GpuHit>(), GraphicsBuffer.Target.Structured) { name = "PathTracerHits" };
+            var desc = new BufferDesc(paths.Count, UnsafeUtility.SizeOf<GpuHit>(), GraphicsBuffer.Target.Structured) { name = "PathTracerHits" };
             BufferHandle hits = renderGraph.CreateBuffer(desc);
 
             using var builder = renderGraph.AddComputePass("Path Tracer: Intersect", out PassData passData);
@@ -51,17 +53,20 @@ namespace SpectralPathTracer
             passData.Shader = Shader;
             passData.Kernel = Kernel;
             passData.Rays = paths.Rays;
-            passData.Paths = paths.Paths;
             passData.Hits = hits;
-            passData.RayCount = frame.RayCount;
-            passData.Groups = GroupCount(frame.RayCount, GroupSizeX);
+            passData.QueueIn = paths.QueueIn(depth);
+            passData.Counters = paths.Counters;
+            passData.Args = paths.Args;
+            passData.QueueInOffset = PathBuffers.QueueInOffset(depth);
 
             passData.Objects = scene.Objects;
             passData.ObjectCount = scene.ObjectCount;
 
             builder.UseBuffer(paths.Rays, AccessFlags.Read);
-            builder.UseBuffer(paths.Paths, AccessFlags.Read);
             builder.UseBuffer(hits, AccessFlags.Write);
+            builder.UseBuffer(paths.QueueIn(depth), AccessFlags.Read);
+            builder.UseBuffer(paths.Counters, AccessFlags.Read);
+            builder.UseBuffer(paths.Args, AccessFlags.Read);
             builder.UseBuffer(scene.Objects, AccessFlags.Read);
 
             // static to reject captured variables from the outer scope
@@ -69,12 +74,13 @@ namespace SpectralPathTracer
             {
                 var cmd = context.cmd;
                 cmd.SetComputeBufferParam(data.Shader, data.Kernel, ShaderIDs.RaysID, data.Rays);
-                cmd.SetComputeBufferParam(data.Shader, data.Kernel, ShaderIDs.PathsID, data.Paths);
                 cmd.SetComputeBufferParam(data.Shader, data.Kernel, ShaderIDs.HitsID, data.Hits);
-                cmd.SetComputeIntParam(data.Shader, ShaderIDs.RayCountID, data.RayCount);
+                cmd.SetComputeBufferParam(data.Shader, data.Kernel, ShaderIDs.QueueInID, data.QueueIn);
+                cmd.SetComputeBufferParam(data.Shader, data.Kernel, ShaderIDs.CountersID, data.Counters);
+                cmd.SetComputeIntParam(data.Shader, ShaderIDs.QueueInOffsetID, data.QueueInOffset);
                 cmd.SetComputeBufferParam(data.Shader, data.Kernel, ShaderIDs.ObjectsID, data.Objects);
                 cmd.SetComputeIntParam(data.Shader, ShaderIDs.ObjectCountID, data.ObjectCount);
-                cmd.DispatchCompute(data.Shader, data.Kernel, data.Groups, 1, 1);
+                cmd.DispatchCompute(data.Shader, data.Kernel, data.Args, 0); // the group count comes from the GPU
             });
 
             return hits;

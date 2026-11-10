@@ -1,32 +1,30 @@
 #pragma kernel Intersect
 
 #include "../Include/Rays.hlsl"
-#include "../Include/PathState.hlsl"
 #include "../Include/SceneData.hlsl"
 
-uint _RayCount;
 uint _ObjectCount;
+uint _QueueInOffset;
 StructuredBuffer<GpuRay> _Rays;
-StructuredBuffer<GpuPathState> _Paths;
+StructuredBuffer<uint> _QueueIn;
+ByteAddressBuffer _Counters;
 RWStructuredBuffer<GpuHit> _Hits;
 StructuredBuffer<GpuObject> _Objects;
 
 /**
  * <summary>
- * Finds where each ray hits the scene and records it in the hit buffer.
+ * Finds where each queued path's ray hits the scene and records it in the hit buffer.
  * </summary>
  */
 [numthreads(64, 1, 1)]
 void Intersect(uint3 id : SV_DispatchThreadID)
 {
-    if (id.x >= _RayCount)
+    // the dispatch rounds up to whole groups, so extra threads exit
+    if (id.x >= _Counters.Load(_QueueInOffset))
         return;
 
-    // a finished path has no ray left to trace
-    if (LoadPath(_Paths, id.x).Active == 0u)
-        return;
-
-    GpuRay ray = LoadRay(_Rays, id.x);
+    uint slot = _QueueIn[id.x];
+    GpuRay ray = LoadRay(_Rays, slot);
 
     GpuHit hit;
     hit.T = 0.0f;
@@ -47,5 +45,5 @@ void Intersect(uint3 id : SV_DispatchThreadID)
         }
     }
 
-    StoreHit(_Hits, id.x, hit);
+    StoreHit(_Hits, slot, hit);
 }

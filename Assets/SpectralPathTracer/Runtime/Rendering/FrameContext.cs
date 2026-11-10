@@ -13,7 +13,7 @@ namespace SpectralPathTracer
 
         public Vector2Int RenderSize { get; }
         public Vector2Int OutputSize { get; }
-        public int RayCount => RenderSize.x * RenderSize.y;
+        public int PixelCount => RenderSize.x * RenderSize.y;
 
         /**
          * <summary>

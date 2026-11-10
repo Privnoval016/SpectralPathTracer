@@ -2,8 +2,7 @@ namespace SpectralPathTracer
 {
     /**
      * <summary>
-     * How far accumulation has got, reported by the pass every frame and read by Editor tools (the repaint loop and
-     * the settings Inspector). Data only, like TracedRegistry.
+     * How far accumulation has got, reported by the pass and read by Editor tools.
      * </summary>
      */
     public static class AccumulationProgress

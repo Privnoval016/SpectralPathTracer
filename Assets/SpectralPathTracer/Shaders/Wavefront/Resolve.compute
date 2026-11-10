@@ -1,12 +1,9 @@
 #pragma kernel Resolve
 
-#include "../Include/Rays.hlsl"
 #include "../Include/PathState.hlsl"
 
 uint _RayCount;
-uint2 _Resolution;
 uint _SampleCount;
-StructuredBuffer<GpuRay> _Rays;
 StructuredBuffer<GpuPathState> _Paths;
 RWStructuredBuffer<float4> _Accumulation;
 
@@ -21,12 +18,10 @@ void Resolve(uint3 id : SV_DispatchThreadID)
     if (id.x >= _RayCount)
         return;
 
-    // the ray keeps its pixel through every bounce, so it still says where this path belongs
-    int2 pixel = LoadRay(_Rays, id.x).Pixel;
-    uint pixelIndex = pixel.x + pixel.y * _Resolution.x;
-    float3 radiance = LoadPath(_Paths, id.x).Radiance;
+    GpuPathState path = LoadPath(_Paths, id.x);
+    float3 radiance = path.Radiance.rgb;
 
-    // the first sample after a reset overwrites whatever an older accumulation left behind
-    float3 sum = _SampleCount == 0u ? radiance : _Accumulation[pixelIndex].rgb + radiance;
-    _Accumulation[pixelIndex] = float4(sum, 1.0f);
+    // the first sample after a reset replaces the old sum
+    float3 sum = _SampleCount == 0u ? radiance : _Accumulation[path.PixelIndex].rgb + radiance;
+    _Accumulation[path.PixelIndex] = float4(sum, 1.0f);
 }

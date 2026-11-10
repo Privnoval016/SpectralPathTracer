@@ -16,10 +16,8 @@ namespace SpectralPathTracer
         {
             public ComputeShader Shader;
             public int Kernel;
-            public BufferHandle Rays;
             public BufferHandle Paths;
             public BufferHandle Accumulation;
-            public readonly int[] Resolution = new int[2];
             public int SampleCount;
             public int RayCount;
             public int Groups;
@@ -35,7 +33,7 @@ namespace SpectralPathTracer
          * </summary>
          * <param name="renderGraph">The render graph recording this frame.</param>
          * <param name="frame">This frame's context.</param>
-         * <param name="paths">The rays and path states after the bounce loop.</param>
+         * <param name="paths">The wave's path states after the bounce loop.</param>
          * <param name="accumulation">The per-pixel sums of every sample since the last reset.</param>
          */
         public void Record(RenderGraph renderGraph, in FrameContext frame, in PathBuffers paths, BufferHandle accumulation)
@@ -44,16 +42,12 @@ namespace SpectralPathTracer
 
             passData.Shader = Shader;
             passData.Kernel = Kernel;
-            passData.Rays = paths.Rays;
             passData.Paths = paths.Paths;
             passData.Accumulation = accumulation;
-            passData.Resolution[0] = frame.RenderSize.x;
-            passData.Resolution[1] = frame.RenderSize.y;
             passData.SampleCount = (int)frame.SampleIndex; // samples already in the sum before this one
-            passData.RayCount = frame.RayCount;
-            passData.Groups = GroupCount(frame.RayCount, GroupSizeX);
+            passData.RayCount = paths.Count;
+            passData.Groups = GroupCount(paths.Count, GroupSizeX);
 
-            builder.UseBuffer(paths.Rays, AccessFlags.Read);
             builder.UseBuffer(paths.Paths, AccessFlags.Read);
             builder.UseBuffer(accumulation, AccessFlags.ReadWrite);
 
@@ -61,10 +55,8 @@ namespace SpectralPathTracer
             builder.SetRenderFunc(static (PassData data, ComputeGraphContext context) =>
             {
                 var cmd = context.cmd;
-                cmd.SetComputeBufferParam(data.Shader, data.Kernel, ShaderIDs.RaysID, data.Rays);
                 cmd.SetComputeBufferParam(data.Shader, data.Kernel, ShaderIDs.PathsID, data.Paths);
                 cmd.SetComputeBufferParam(data.Shader, data.Kernel, ShaderIDs.AccumulationID, data.Accumulation);
-                cmd.SetComputeIntParams(data.Shader, ShaderIDs.ResolutionID, data.Resolution);
                 cmd.SetComputeIntParam(data.Shader, ShaderIDs.SampleCountID, data.SampleCount);
                 cmd.SetComputeIntParam(data.Shader, ShaderIDs.RayCountID, data.RayCount);
                 cmd.DispatchCompute(data.Shader, data.Kernel, data.Groups, 1, 1);

@@ -9,7 +9,6 @@
 #include "../Include/Sampler.hlsl"
 #include "../Include/Sampling.hlsl"
 
-uint _RayCount;
 uint _Depth;
 uint _MaxBounces;
 RWStructuredBuffer<GpuRay> _Rays;
@@ -17,6 +16,11 @@ StructuredBuffer<GpuHit> _Hits;
 StructuredBuffer<GpuObject> _Objects;
 StructuredBuffer<GpuMaterial> _Materials;
 RWStructuredBuffer<GpuPathState> _Paths;
+StructuredBuffer<uint> _QueueIn;
+RWStructuredBuffer<uint> _QueueOut;
+RWByteAddressBuffer _Counters;
+uint _QueueInOffset;
+uint _QueueOutOffset;
 
 /**
  * <summary>
@@ -26,15 +30,17 @@ RWStructuredBuffer<GpuPathState> _Paths;
 [numthreads(64, 1, 1)]
 void Shade(uint3 id : SV_DispatchThreadID)
 {
-    if (id.x >= _RayCount)
+    // the dispatch rounds up to whole groups, so extra threads exit
+    if (id.x >= _Counters.Load(_QueueInOffset))
         return;
 
-    GpuPathState path = LoadPath(_Paths, id.x);
-    if (path.Active == 0u)
+    uint slot = _QueueIn[id.x];
+    GpuPathState path = LoadPath(_Paths, slot);
+    if (!IsActive(path))
         return;
 
-    GpuRay ray = LoadRay(_Rays, id.x);
-    GpuHit hit = LoadHit(_Hits, id.x);
+    GpuRay ray = LoadRay(_Rays, slot);
+    GpuHit hit = LoadHit(_Hits, slot);
 
     // rebuild the hit from the ray instead of storing it
     float3 position = float3(0.0f, 0.0f, 0.0f);
@@ -53,18 +59,18 @@ void Shade(uint3 id : SV_DispatchThreadID)
 
     if (_Depth == 0u && _Aov != AOV_NONE)
     {
-        path.Radiance = AovColor(ray, hit, normal, frontFace);
-        path.Active = 0u;
+        path.Radiance.rgb = AovColor(ray, hit, normal, frontFace);
+        Finish(path);
     }
     else if (hit.Hit == 0u)
     {
-        path.Radiance += path.Throughput * SkyRadiance(ray.Direction); // the sky is a light too
-        path.Active = 0u;
+        path.Radiance.rgb += path.Throughput.rgb * SkyRadiance(ray.Direction); // the sky is a light too
+        Finish(path);
     }
     else
     {
         if (frontFace)
-            path.Radiance += path.Throughput * material.Emission; // lights emit from their front only
+            path.Radiance.rgb += path.Throughput.rgb * material.Emission; // lights emit from their front only
 
         if (_Depth < _MaxBounces)
         {
@@ -73,19 +79,24 @@ void Shade(uint3 id : SV_DispatchThreadID)
             float2 u = float2(SampleUniform(pixel, _SampleIndex, BounceDimension(_Depth, SLOT_BSDF_U)),
                               SampleUniform(pixel, _SampleIndex, BounceDimension(_Depth, SLOT_BSDF_V)));
 
-            path.Throughput *= material.Albedo; // (albedo / pi) * cos / (cos / pi): the cosines and pis cancel
-            if (any(path.Throughput > 0.0f))
+            path.Throughput.rgb *= material.Albedo; // f cos / pdf for a Lambertian surface is just the albedo
+            if (any(path.Throughput.rgb > 0.0f))
             {
                 ray.Origin = OffsetRayOrigin(position, facing);
                 ray.Direction = LocalToWorld(SampleCosineHemisphere(u), facing);
-                StoreRay(_Rays, id.x, ray);
+                StoreRay(_Rays, slot, ray);
+
+                // each thread gets its own slot, so the queue stays packed
+                uint queuePosition;
+                _Counters.InterlockedAdd(_QueueOutOffset, 1u, queuePosition);
+                _QueueOut[queuePosition] = slot;
             }
             else
-                path.Active = 0u; // nothing found later can add light
+                Finish(path); // nothing found later can add light
         }
         else
-            path.Active = 0u;
+            Finish(path);
     }
 
-    StorePath(_Paths, id.x, path);
+    StorePath(_Paths, slot, path);
 }

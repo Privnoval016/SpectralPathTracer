@@ -97,11 +97,19 @@ namespace SpectralPathTracer
             int kernel = shader.FindKernel(GenerateKernelName);
             using var rays = new GraphicsBuffer(GraphicsBuffer.Target.Structured, Width * Height, UnsafeUtility.SizeOf<GpuRay>());
             using var paths = new GraphicsBuffer(GraphicsBuffer.Target.Structured, Width * Height, UnsafeUtility.SizeOf<GpuPathState>());
+            using var queue = new GraphicsBuffer(GraphicsBuffer.Target.Structured, Width * Height, sizeof(uint));
+            using var counters = new GraphicsBuffer(GraphicsBuffer.Target.Raw, 2, sizeof(uint));
+            using var args = new GraphicsBuffer(GraphicsBuffer.Target.IndirectArguments | GraphicsBuffer.Target.Raw, 3, sizeof(uint));
 
             // Generate also starts each path, so every buffer it writes must be bound or the dispatch may do nothing
             shader.SetBuffer(kernel, ShaderIDs.RaysID, rays);
             shader.SetBuffer(kernel, ShaderIDs.PathsID, paths);
+            shader.SetBuffer(kernel, ShaderIDs.QueueOutID, queue);
+            shader.SetBuffer(kernel, ShaderIDs.CountersID, counters);
+            shader.SetBuffer(kernel, ShaderIDs.ArgsID, args);
             shader.SetInts(ShaderIDs.ResolutionID, Width, Height);
+            shader.SetInt(ShaderIDs.WaveStartID, 0);
+            shader.SetInt(ShaderIDs.RayCountID, Width * Height);
             shader.SetMatrix(ShaderIDs.CameraToWorldID, camera.CameraToWorld);
             shader.SetFloat(ShaderIDs.TanHalfFovYID, camera.TanHalfFov);
             shader.SetFloat(ShaderIDs.AspectRatioID, camera.AspectRatio);
@@ -109,8 +117,9 @@ namespace SpectralPathTracer
             shader.SetInt(ShaderIDs.SampleIndexID, 0);
             shader.SetVector(ShaderIDs.OutputScaleID, Vector2.one);
 
-            shader.GetKernelThreadGroupSizes(kernel, out uint groupSizeX, out uint groupSizeY, out _);
-            shader.Dispatch(kernel, (Width + (int)groupSizeX - 1) / (int)groupSizeX, (Height + (int)groupSizeY - 1) / (int)groupSizeY, 1);
+            // one wave covering the whole image, one thread per pixel
+            shader.GetKernelThreadGroupSizes(kernel, out uint groupSizeX, out _, out _);
+            shader.Dispatch(kernel, (Width * Height + (int)groupSizeX - 1) / (int)groupSizeX, 1, 1);
 
             var result = new GpuRay[Width * Height];
             rays.GetData(result);
