@@ -1,3 +1,9 @@
+/**
+ * <summary>
+ * Constants shared by every include.
+ * </summary>
+ */
+
 #ifndef SPT_COMMON_INCLUDED
 #define SPT_COMMON_INCLUDED
 

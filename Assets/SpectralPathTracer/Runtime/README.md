@@ -52,4 +52,24 @@ flowchart TD
 - **Accumulation.** Resolve adds each sample to a per-pixel sum, and Display divides by the sample count. Anything that
   changes the image (camera, scene, bounces, AOV) restarts the sums; exposure doesn't, because it applies after averaging.
 
+## Random numbers
+
+Nothing stores random state. Every number is a hash of who asks and why, so any kernel can draw any number and a pixel's
+numbers repeat exactly after a reset (`Shaders/Include/Sampler.hlsl`).
+
+```mermaid
+flowchart LR
+    pixel["output pixel x, y"] --> hash
+    sample["sample index<br/>restarts at 0 on reset"] --> hash
+    dim["dimension<br/>which use this is"] --> hash
+    hash["pcg4d"] --> bits["top 24 bits"] --> u["u in [0, 1)"]
+```
+
+Each use has a permanent dimension, so adding a new use never shifts the others.
+
+| Dimensions | Owner | Used now |
+|---|---|---|
+| 0, 1 | camera | pixel jitter x and y |
+| 2 + 16 d to 17 + 16 d | bounce d (`BounceDimension(d, slot)`) | slot 0 and 1, the bounce direction; slots 2 to 15 are reserved for light sampling, Russian roulette and media |
+
 The checkpoint devlogs in `Docs/Checkpoints` explain why each piece is built this way.

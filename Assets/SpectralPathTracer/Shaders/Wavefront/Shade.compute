@@ -1,3 +1,9 @@
+/**
+ * <summary>
+ * Adds the light each queued path finds, then samples its next bounce or finishes it.
+ * </summary>
+ */
+
 #pragma kernel Shade
 
 #include "../Include/Sky.hlsl"

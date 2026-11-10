@@ -1,3 +1,9 @@
+/**
+ * <summary>
+ * Reads and writes a path's state and flags, so kernels never touch the buffer layout directly.
+ * </summary>
+ */
+
 #ifndef SPT_PATH_STATE_INCLUDED
 #define SPT_PATH_STATE_INCLUDED
 

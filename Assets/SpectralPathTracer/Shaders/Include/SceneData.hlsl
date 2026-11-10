@@ -1,3 +1,9 @@
+/**
+ * <summary>
+ * Scene object and material records, and the per-shape choice of intersection and normal.
+ * </summary>
+ */
+
 #ifndef SPT_SCENE_DATA_INCLUDED
 #define SPT_SCENE_DATA_INCLUDED
 

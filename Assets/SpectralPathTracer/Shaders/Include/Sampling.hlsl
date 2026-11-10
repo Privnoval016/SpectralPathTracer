@@ -1,3 +1,9 @@
+/**
+ * <summary>
+ * Warps that turn uniform numbers into disk points and hemisphere directions, with their pdfs.
+ * </summary>
+ */
+
 #ifndef SPT_SAMPLING_INCLUDED
 #define SPT_SAMPLING_INCLUDED
 

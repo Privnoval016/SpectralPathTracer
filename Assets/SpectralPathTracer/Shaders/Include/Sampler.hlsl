@@ -1,3 +1,9 @@
+/**
+ * <summary>
+ * The stateless random number source and the map of which dimension each use draws from.
+ * </summary>
+ */
+
 #ifndef SPT_SAMPLER_INCLUDED
 #define SPT_SAMPLER_INCLUDED
 

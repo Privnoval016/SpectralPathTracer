@@ -1,3 +1,9 @@
+/**
+ * <summary>
+ * Turns a bounce's survivor count into the next indirect dispatch size.
+ * </summary>
+ */
+
 #pragma kernel Args
 
 #include "../Include/Queues.hlsl"

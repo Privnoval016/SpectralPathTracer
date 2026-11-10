@@ -1,3 +1,9 @@
+/**
+ * <summary>
+ * Ray intersection and normal for a quad, the unit square in its local XY plane.
+ * </summary>
+ */
+
 #ifndef SPT_QUAD_INCLUDED
 #define SPT_QUAD_INCLUDED
 

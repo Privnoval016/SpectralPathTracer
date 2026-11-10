@@ -1,3 +1,9 @@
+/**
+ * <summary>
+ * Starts one path per slot in a wave with its camera ray, its state and its place in the first queue.
+ * </summary>
+ */
+
 #pragma kernel Generate
 
 #include "../Include/Camera.hlsl"

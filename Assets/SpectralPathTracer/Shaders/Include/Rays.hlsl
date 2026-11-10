@@ -1,3 +1,9 @@
+/**
+ * <summary>
+ * Ray and hit records, and the accessors every kernel reads and writes them through.
+ * </summary>
+ */
+
 #ifndef SPT_RAYS_INCLUDED
 #define SPT_RAYS_INCLUDED
 

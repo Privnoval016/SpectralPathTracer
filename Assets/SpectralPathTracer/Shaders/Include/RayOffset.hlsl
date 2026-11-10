@@ -1,3 +1,9 @@
+/**
+ * <summary>
+ * Moves a bounce ray's origin off its surface so the ray can't hit that surface again.
+ * </summary>
+ */
+
 #ifndef SPT_RAY_OFFSET_INCLUDED
 #define SPT_RAY_OFFSET_INCLUDED
 

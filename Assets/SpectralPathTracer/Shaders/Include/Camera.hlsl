@@ -1,3 +1,9 @@
+/**
+ * <summary>
+ * The pinhole camera's uniforms and the ray through any point on the image.
+ * </summary>
+ */
+
 #ifndef SPT_CAMERA_INCLUDED
 #define SPT_CAMERA_INCLUDED
 

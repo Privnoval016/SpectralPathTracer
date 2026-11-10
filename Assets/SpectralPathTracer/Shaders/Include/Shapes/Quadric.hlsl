@@ -1,3 +1,9 @@
+/**
+ * <summary>
+ * Ray intersection and normal for any quadric surface, spheres and planes included.
+ * </summary>
+ */
+
 #ifndef SPT_QUADRIC_INCLUDED
 #define SPT_QUADRIC_INCLUDED
 

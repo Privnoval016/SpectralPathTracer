@@ -1,3 +1,9 @@
+/**
+ * <summary>
+ * Averages the accumulated sums, then applies exposure and a clamp for the screen.
+ * </summary>
+ */
+
 #pragma kernel Display
 
 uint2 _Resolution;

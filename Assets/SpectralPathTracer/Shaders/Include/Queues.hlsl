@@ -1,3 +1,9 @@
+/**
+ * <summary>
+ * Sizes shared by the live-path queues and their indirect dispatches.
+ * </summary>
+ */
+
 #ifndef SPT_QUEUES_INCLUDED
 #define SPT_QUEUES_INCLUDED
 

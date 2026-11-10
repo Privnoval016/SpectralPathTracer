@@ -1,3 +1,9 @@
+/**
+ * <summary>
+ * Adds every path's radiance to its pixel's running sum.
+ * </summary>
+ */
+
 #pragma kernel Resolve
 
 #include "../Include/PathState.hlsl"

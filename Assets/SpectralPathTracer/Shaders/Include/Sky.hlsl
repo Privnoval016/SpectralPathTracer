@@ -1,3 +1,9 @@
+/**
+ * <summary>
+ * The sky's radiance in a direction, seen by camera rays and used as a light by bounces.
+ * </summary>
+ */
+
 #ifndef SPT_SKY_INCLUDED
 #define SPT_SKY_INCLUDED
 

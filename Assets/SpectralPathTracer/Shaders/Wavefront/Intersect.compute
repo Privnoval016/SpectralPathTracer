@@ -1,3 +1,9 @@
+/**
+ * <summary>
+ * Finds the nearest hit for every queued path's ray.
+ * </summary>
+ */
+
 #pragma kernel Intersect
 
 #include "../Include/Rays.hlsl"

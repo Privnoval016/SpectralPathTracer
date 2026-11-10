@@ -1,3 +1,9 @@
+/**
+ * <summary>
+ * What each AOV shows for a ray's first hit, in place of the rendered result.
+ * </summary>
+ */
+
 #ifndef SPT_AOV_INCLUDED
 #define SPT_AOV_INCLUDED
 
