@@ -1,0 +1,27 @@
+#pragma kernel Shade
+
+#include "../Include/Sky.hlsl"
+#include "../Include/Rays.hlsl"
+
+uint _RayCount;
+StructuredBuffer<GpuRay> _Rays;
+StructuredBuffer<GpuHit> _Hits;
+RWTexture2D<float4> _Output;
+
+/**
+ * <summary>
+ * Turns each ray's hit into a color and writes it to the ray's pixel.
+ * </summary>
+ */
+[numthreads(64, 1, 1)]
+void Shade(uint3 id : SV_DispatchThreadID)
+{
+    if (id.x >= _RayCount)
+        return;
+
+    GpuRay ray = LoadRay(_Rays, id.x);
+    GpuHit hit = LoadHit(_Hits, id.x);
+
+    float3 color = hit.Hit != 0u ? float3(1.0f, 1.0f, 1.0f) : SkyRadiance(ray.Direction);
+    _Output[ray.Pixel] = float4(color, 1.0f);
+}

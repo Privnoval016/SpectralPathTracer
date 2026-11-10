@@ -1,0 +1,17 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a3966e9731a7340febf99f7d06f8bf67, type: 3}
+  m_Name: PathTracerShaders
+  m_EditorClassIdentifier: SpectralPathTracer::SpectralPathTracer.PathTracerShaders
+  <Generate>k__BackingField: {fileID: 7200000, guid: a493b7ac33fb74dd4bb31725da6672ac, type: 3}
+  <Intersect>k__BackingField: {fileID: 7200000, guid: 6fa9620282252417b8035edcfd733019, type: 3}
+  <Shade>k__BackingField: {fileID: 7200000, guid: 04df1ca2a02534c4c91343bd135cbe4f, type: 3}

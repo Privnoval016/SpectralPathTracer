@@ -1,0 +1,28 @@
+#pragma kernel Generate
+
+#include "../Include/Camera.hlsl"
+#include "../Include/Rays.hlsl"
+
+uint2 _Resolution;
+RWStructuredBuffer<GpuRay> _Rays;
+
+/**
+ * <summary>
+ * Writes one camera ray per pixel into the ray buffer.
+ * </summary>
+ */
+[numthreads(8, 8, 1)]
+void Generate(uint3 id : SV_DispatchThreadID)
+{
+    if (any(id.xy >= _Resolution))
+        return;
+
+    float2 uv = (float2(id.xy) + 0.5f) / float2(_Resolution);
+
+    GpuRay ray;
+    ray.Origin = CameraRayOrigin();
+    ray.Direction = CameraRayDirection(uv * 2.0f - 1.0f);
+    ray.Pixel = int2(id.xy);
+
+    StoreRay(_Rays, id.x + id.y * _Resolution.x, ray); // rays are stored row after row
+}

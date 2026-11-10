@@ -1,0 +1,27 @@
+using UnityEngine;
+
+namespace SpectralPathTracer
+{
+    [CreateAssetMenu(fileName = "PathTracerShaders", menuName = "Spectral Path Tracer/Path Tracer Shaders")]
+    public class PathTracerShaders : ScriptableObject
+    {
+        #region Inspector Fields
+
+        [field: Tooltip("Writes one camera ray per pixel.")]
+        [field: SerializeField] public ComputeShader Generate { get; private set; }
+
+        [field: Tooltip("Finds where each ray hits the scene.")]
+        [field: SerializeField] public ComputeShader Intersect { get; private set; }
+
+        [field: Tooltip("Turns each hit into a color in the output texture.")]
+        [field: SerializeField] public ComputeShader Shade { get; private set; }
+
+        #endregion
+
+        #region Properties
+
+        public bool IsComplete => Generate != null && Intersect != null && Shade != null;
+
+        #endregion
+    }
+}

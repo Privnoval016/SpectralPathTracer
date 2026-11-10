@@ -1,0 +1,6 @@
+#ifndef SPT_COMMON_INCLUDED
+#define SPT_COMMON_INCLUDED
+
+static const float PI = 3.14159265358979323846f;
+
+#endif

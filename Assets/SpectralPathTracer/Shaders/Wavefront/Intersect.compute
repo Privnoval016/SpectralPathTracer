@@ -1,0 +1,32 @@
+#pragma kernel Intersect
+
+#include "../Include/Quadric.hlsl"
+#include "../Include/Rays.hlsl"
+
+// temporary test sphere
+static const float3 SPHERE_CENTER = float3(0.0f, 1.0f, 0.0f);
+static const float SPHERE_RADIUS = 1.0f;
+
+uint _RayCount;
+StructuredBuffer<GpuRay> _Rays;
+RWStructuredBuffer<GpuHit> _Hits;
+
+/**
+ * <summary>
+ * Finds where each ray hits the scene and records it in the hit buffer.
+ * </summary>
+ */
+[numthreads(64, 1, 1)]
+void Intersect(uint3 id : SV_DispatchThreadID)
+{
+    if (id.x >= _RayCount)
+        return;
+
+    GpuRay ray = LoadRay(_Rays, id.x);
+
+    GpuHit hit;
+    float4x4 sphereQuadric = SphereQuadric(SPHERE_CENTER, SPHERE_RADIUS);
+    hit.Hit = IntersectQuadric(sphereQuadric, ray.Origin, ray.Direction, 0.0f, hit.T) ? 1u : 0u;
+
+    StoreHit(_Hits, id.x, hit);
+}

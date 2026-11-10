@@ -7,8 +7,8 @@ namespace SpectralPathTracer
     {
         #region Inspector Fields
         
-        [Tooltip("The compute shader containing the path tracer kernels.")]
-        [SerializeField] private ComputeShader pathTracerShader;
+        [Tooltip("The compute shaders for each wavefront stage.")]
+        [SerializeField] private PathTracerShaders shaders;
 
         [Tooltip("The path tracer settings.")]
         [SerializeField] private PathTracerSettings settings;
@@ -16,8 +16,6 @@ namespace SpectralPathTracer
         #endregion
 
         #region Private Fields
-
-        private const string KernelName = "Render";
 
         private PathTracerPass _pass;
 
@@ -28,9 +26,9 @@ namespace SpectralPathTracer
             _pass?.Dispose();
             _pass = null;
 
-            if (pathTracerShader == null)
+            if (shaders == null || !shaders.IsComplete)
             {
-                Debug.LogWarning("PathTracerFeature: No compute shader assigned.");
+                Debug.LogWarning("PathTracerFeature: Shaders asset missing or incomplete.");
                 return;
             }
 
@@ -40,9 +38,7 @@ namespace SpectralPathTracer
                 return;
             }
 
-            int kernelIndex = pathTracerShader.FindKernel(KernelName);
-
-            _pass = new PathTracerPass(pathTracerShader, settings, kernelIndex)
+            _pass = new PathTracerPass(shaders, settings)
             {
                 renderPassEvent = RenderPassEvent.AfterRenderingPostProcessing
             };

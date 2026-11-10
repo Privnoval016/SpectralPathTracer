@@ -68,5 +68,5 @@ MonoBehaviour:
   m_Name: PathTracerFeature
   m_EditorClassIdentifier: SpectralPathTracer::SpectralPathTracer.PathTracerFeature
   m_Active: 1
-  pathTracerShader: {fileID: 7200000, guid: 75e6eb151ea3f474391a5166fa442812, type: 3}
+  shaders: {fileID: 11400000, guid: 269b0b50506ee4537b62dbfd5353c2ce, type: 2}
   settings: {fileID: 11400000, guid: 20b49b96c96244a89ac6e3c4dde2d26b, type: 2}

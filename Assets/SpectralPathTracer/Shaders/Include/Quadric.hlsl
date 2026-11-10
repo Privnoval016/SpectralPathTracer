@@ -1,21 +1,7 @@
-#pragma kernel Render
-
-RWTexture2D<float4> _Output;
-uint2 _Resolution;
-float4x4 _CameraToWorld;
-float _TanHalfFov;
-float _AspectRatio;
-
-static const float PI = 3.14159265358979323846f;
-float3 _SkyZenithColor;
-float3 _SkyHorizonColor;
-float3 _SkyGroundColor;
+#ifndef SPT_QUADRIC_INCLUDED
+#define SPT_QUADRIC_INCLUDED
 
 static const float QUADRIC_EPSILON = 1e-6f;
-
-// temporary test sphere
-static const float3 SPHERE_CENTER = float3(0.0f, 1.0f, 0.0f);
-static const float SPHERE_RADIUS = 1.0f;
 
 /**
  * <summary>
@@ -34,17 +20,6 @@ float4x4 SphereQuadric(float3 center, float radius)
         -center.x, -center.y, -center.z, dot(center, center) - radius * radius
     );
     return Q;
-}
-
-/**
- * <summary>
- * Computes the origin of the camera ray in world space.
- * </summary>
- * <returns>The origin of the camera ray in world space.</returns>
- */
-float3 CameraRayOrigin()
-{
-    return mul(_CameraToWorld, float4(0.0f, 0.0f, 0.0f, 1.0f)).xyz;
 }
 
 
@@ -98,52 +73,4 @@ bool IntersectQuadric(float4x4 q, float3 origin, float3 direction, float tMin, o
     return hit;
 }
 
-float3 SkyRadiance(float3 direction)
-{
-    if (direction.y < 0.0f)
-    {
-        // Below the horizon, use the ground color
-        return _SkyGroundColor;
-    }
-    else
-    {
-        // Above the horizon, interpolate between horizon and zenith based on the angle from the zenith
-        float elevation = asin(saturate(direction.y)) / (PI / 2.0f); // Normalize elevation to [0, 1]
-        return lerp(_SkyHorizonColor, _SkyZenithColor, elevation);
-    }
-}
-
-/**
- * <summary>
- * Computes the direction of a ray from the camera through a pixel in normalized device coordinates.
- * </summary>
- * <param name="ndc">The normalized device coordinates of the pixel, where (-1,-1) is the bottom-left and (1,1) is the top-right.</param>
- * <returns>The normalized direction of the ray in world space.</returns>
- */
-float3 CameraRayDirection(float2 ndc)
-{
-    float3 local = float3(ndc.x * _AspectRatio * _TanHalfFov, ndc.y * _TanHalfFov, 1.0f);
-    return normalize(mul(_CameraToWorld, float4(local, 0.0f)).xyz);
-}
-
-/**
- * <summary>
- * Shows each pixel's camera ray direction as a color: red for +x, green for +y, blue for +z.
- * </summary>
- */
-[numthreads(8, 8, 1)]
-void Render(uint3 id : SV_DispatchThreadID)
-{
-    if (any(id.xy >= _Resolution))
-        return;
-
-    float2 uv = (float2(id.xy) + 0.5f) / float2(_Resolution);
-    float3 rayDir = CameraRayDirection(uv * 2.0f - 1.0f);
-    float3 rayOrigin = CameraRayOrigin();
-
-    float t;
-    float4x4 sphereQuadric = SphereQuadric(SPHERE_CENTER, SPHERE_RADIUS);
-    float3 color = IntersectQuadric(sphereQuadric, rayOrigin, rayDir, 0.0f, t) ? float3(1.0f, 1.0f, 1.0f) : SkyRadiance(rayDir);
-
-    _Output[id.xy] = float4(color, 1.0f);
-}
+#endif
