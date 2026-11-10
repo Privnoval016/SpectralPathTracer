@@ -5,6 +5,11 @@ namespace SpectralPathTracer
     public static class ShaderIDs
     {
         public static readonly int OutputID = Shader.PropertyToID("_Output");
+        public static readonly int RadianceID = Shader.PropertyToID("_Radiance");
+        public static readonly int DisplayID = Shader.PropertyToID("_Display");
+        public static readonly int ExposureScaleID = Shader.PropertyToID("_ExposureScale");
+        public static readonly int ApplyExposureID = Shader.PropertyToID("_ApplyExposure");
+        public static readonly int ShowGrayRampID = Shader.PropertyToID("_ShowGrayRamp");
         public static readonly int ResolutionID = Shader.PropertyToID("_Resolution");
         public static readonly int RayCountID = Shader.PropertyToID("_RayCount");
 

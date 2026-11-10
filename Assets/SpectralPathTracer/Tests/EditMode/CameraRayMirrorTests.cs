@@ -60,8 +60,11 @@ namespace SpectralPathTracer
         {
             int kernel = shader.FindKernel(GenerateKernelName);
             using var rays = new GraphicsBuffer(GraphicsBuffer.Target.Structured, Width * Height, UnsafeUtility.SizeOf<GpuRay>());
+            using var paths = new GraphicsBuffer(GraphicsBuffer.Target.Structured, Width * Height, UnsafeUtility.SizeOf<GpuPathState>());
 
+            // Generate also starts each path, so every buffer it writes must be bound or the dispatch may do nothing
             shader.SetBuffer(kernel, ShaderIDs.RaysID, rays);
+            shader.SetBuffer(kernel, ShaderIDs.PathsID, paths);
             shader.SetInts(ShaderIDs.ResolutionID, Width, Height);
             shader.SetMatrix(ShaderIDs.CameraToWorldID, camera.CameraToWorld);
             shader.SetFloat(ShaderIDs.TanHalfFovYID, camera.TanHalfFov);

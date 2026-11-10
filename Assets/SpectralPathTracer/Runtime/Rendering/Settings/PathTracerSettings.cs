@@ -33,6 +33,15 @@ namespace SpectralPathTracer
         [field: Range(0, 16)]
         [field: SerializeField] public int MaxBounces { get; private set; } = 1;
 
+        [field: Header("Display")]
+
+        [field: Tooltip("Brightness in stops, where each +1 doubles it, 0 leaves the radiance unchanged.")]
+        [field: Range(-10f, 10f)]
+        [field: SerializeField] public float Exposure { get; private set; } = 0f;
+
+        [field: Tooltip("Shows a linear gray ramp instead of the image, to check that sRGB encoding happens exactly once.")]
+        [field: SerializeField] public bool ShowGrayRamp { get; private set; } = false;
+
 
         #endregion
 

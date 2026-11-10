@@ -19,11 +19,14 @@ namespace SpectralPathTracer
         [field: Tooltip("Writes each path's gathered light to its pixel.")]
         [field: SerializeField] public ComputeShader Resolve { get; private set; }
 
+        [field: Tooltip("Turns linear radiance into displayable values.")]
+        [field: SerializeField] public ComputeShader Display { get; private set; }
+
         #endregion
 
         #region Properties
 
-        public bool IsComplete => Generate != null && Intersect != null && Shade != null && Resolve != null;
+        public bool IsComplete => Generate != null && Intersect != null && Shade != null && Resolve != null && Display != null;
 
         #endregion
     }

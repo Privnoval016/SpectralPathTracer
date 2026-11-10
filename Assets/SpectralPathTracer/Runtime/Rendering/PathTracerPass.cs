@@ -18,11 +18,12 @@ namespace SpectralPathTracer
         private readonly IntersectStage _intersectStage;
         private readonly ShadeStage _shadeStage;
         private readonly ResolveStage _resolveStage;
+        private readonly DisplayStage _displayStage;
         private readonly PresentStage _presentStage;
 
         private readonly SceneCompiler _sceneCompiler = new SceneCompiler();
 
-        private RTHandle _output;
+        private RTHandle _radiance;
 
         private uint _sampleIndex;
 
@@ -47,6 +48,7 @@ namespace SpectralPathTracer
             _intersectStage = new IntersectStage(shaders.Intersect);
             _shadeStage = new ShadeStage(shaders.Shade);
             _resolveStage = new ResolveStage(shaders.Resolve);
+            _displayStage = new DisplayStage(shaders.Display);
             _presentStage = new PresentStage();
 
             requiresIntermediateTexture = true;
@@ -71,19 +73,21 @@ namespace SpectralPathTracer
             UniversalResourceData resourceData = frameData.Get<UniversalResourceData>();
             TextureDesc cameraDesc = renderGraph.GetTextureDesc(resourceData.activeColorTexture);
             var depthRange = new Vector2(_aovSettings.DepthNear, _aovSettings.DepthFar);
-            var frame = new FrameContext(_settings.RenderResolution, _settings.OutputResolution, _sampleIndex, _settings.MaxBounces, PinholeCamera.From(cameraData.camera, _settings), skyColors, _aovSettings.Aov, depthRange, _aovSettings.NoiseDimension);
+            var frame = new FrameContext(_settings.RenderResolution, _settings.OutputResolution, _sampleIndex, _settings.MaxBounces, PinholeCamera.From(cameraData.camera, _settings), skyColors, _aovSettings.Aov, depthRange, _aovSettings.NoiseDimension, _settings.Exposure, _settings.ShowGrayRamp);
 
-            TextureHandle output = ImportOutput(renderGraph, cameraDesc, frame.RenderSize);
+            TextureHandle radiance = ImportRadiance(renderGraph, cameraDesc, frame.RenderSize);
 
             _sceneCompiler.Update();
 
             if (!_settings.Paused)
             {
-                RecordWavefront(renderGraph, frame, output);
+                RecordWavefront(renderGraph, frame, radiance);
                 _sampleIndex++;
             }
 
-            _presentStage.Record(renderGraph, output, resourceData.activeColorTexture, cameraDesc, _settings.OutputResolution);
+            // the display transform runs even while paused, so exposure can be adjusted on a frozen image
+            TextureHandle display = _displayStage.Record(renderGraph, frame, radiance);
+            _presentStage.Record(renderGraph, display, resourceData.activeColorTexture, cameraDesc, _settings.OutputResolution);
         }
 
         /**
@@ -93,8 +97,8 @@ namespace SpectralPathTracer
          */
         public void Dispose()
         {
-            _output?.Release();
-            _output = null;
+            _radiance?.Release();
+            _radiance = null;
             _sceneCompiler.Dispose();
         }
 
@@ -102,25 +106,25 @@ namespace SpectralPathTracer
 
         /**
          * <summary>
-         * Makes sure the persistent output texture matches this frame's size and format, then imports it.
+         * Makes sure the persistent radiance texture matches this frame's size and format, then imports it.
          * </summary>
          * <param name="renderGraph">The render graph recording this frame.</param>
          * <param name="cameraDesc">The camera target's descriptor, used as the starting point.</param>
          * <param name="renderSize">The size to render at this frame.</param>
-         * <returns>The output texture's handle for this frame's render graph.</returns>
+         * <returns>The radiance texture's handle for this frame's render graph.</returns>
          */
-        private TextureHandle ImportOutput(RenderGraph renderGraph, TextureDesc cameraDesc, Vector2Int renderSize)
+        private TextureHandle ImportRadiance(RenderGraph renderGraph, TextureDesc cameraDesc, Vector2Int renderSize)
         {
             TextureDesc desc = cameraDesc;
-            desc.format = GraphicsFormat.R16G16B16A16_SFloat;
+            desc.format = GraphicsFormat.R32G32B32A32_SFloat; // accumulation needs 24 bits of precision and this is also platform agnostic
             desc.enableRandomWrite = true;
             desc.msaaSamples = MSAASamples.None;
             desc.clearBuffer = false;
             desc.width = renderSize.x;
             desc.height = renderSize.y;
 
-            RenderingUtils.ReAllocateHandleIfNeeded(ref _output, desc, "PathTracerOutput");
-            return renderGraph.ImportTexture(_output);
+            RenderingUtils.ReAllocateHandleIfNeeded(ref _radiance, desc, "PathTracerRadiance");
+            return renderGraph.ImportTexture(_radiance);
         }
 
         /**
@@ -129,9 +133,9 @@ namespace SpectralPathTracer
          * </summary>
          * <param name="renderGraph">The render graph recording this frame.</param>
          * <param name="frame">This frame's context.</param>
-         * <param name="output">The texture to resolve into.</param>
+         * <param name="radiance">The radiance texture to resolve into.</param>
          */
-        private void RecordWavefront(RenderGraph renderGraph, in FrameContext frame, TextureHandle output)
+        private void RecordWavefront(RenderGraph renderGraph, in FrameContext frame, TextureHandle radiance)
         {
             SceneBuffers scene = _sceneCompiler.Import(renderGraph);
 
@@ -144,7 +148,7 @@ namespace SpectralPathTracer
                 _shadeStage.Record(renderGraph, frame, paths, hits, scene, depth);
             }
 
-            _resolveStage.Record(renderGraph, frame, paths, output);
+            _resolveStage.Record(renderGraph, frame, paths, radiance);
         }
 
         /**

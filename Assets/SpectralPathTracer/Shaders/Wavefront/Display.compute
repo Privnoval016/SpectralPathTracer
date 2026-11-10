@@ -1,0 +1,33 @@
+#pragma kernel Display
+
+uint2 _Resolution;
+float _ExposureScale;
+uint _ApplyExposure;
+uint _ShowGrayRamp;
+Texture2D<float4> _Radiance;
+RWTexture2D<float4> _Display;
+
+/**
+ * <summary>
+ * Displays the radiance buffer into the output, applying exposure if requested.
+ * </summary>
+ */
+[numthreads(8, 8, 1)] // 2D dispatch
+void Display(uint3 id : SV_DispatchThreadID)
+{
+    if (any(id.xy >= _Resolution))
+        return;
+
+    float3 color = _Radiance[id.xy].rgb;
+    if (_ShowGrayRamp != 0u)
+    {
+        color = ((id.x + 0.5f) / _Resolution.x).xxx; // linear ramp
+    }
+    else if (_ApplyExposure != 0u)
+    {
+        color *= _ExposureScale;
+    }
+
+    // srgb encoding done with the blit
+    _Display[id.xy] = float4(saturate(color), 1.0f);
+}
