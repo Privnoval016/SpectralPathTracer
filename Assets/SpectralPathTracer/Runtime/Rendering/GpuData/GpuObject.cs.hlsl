@@ -9,6 +9,8 @@
 struct GpuObject
 {
     float4x4 Quadric;
+    float4x4 WorldToLocal;
+    int Type;
     int MaterialIndex;
 };
 

@@ -12,14 +12,14 @@ namespace SpectralPathTracer
         #region Private Fields
 
         private static readonly List<Sky> SkyList = new List<Sky>();
-        private static readonly List<TracedSphere> SphereList = new List<TracedSphere>();
+        private static readonly List<TracedShape> ShapeList = new List<TracedShape>();
 
         #endregion
 
         #region Properties
 
         public static IReadOnlyList<Sky> Skies => SkyList;
-        public static IReadOnlyList<TracedSphere> Spheres => SphereList;
+        public static IReadOnlyList<TracedShape> Shapes => ShapeList;
 
         /**
          * <summary>
@@ -41,17 +41,17 @@ namespace SpectralPathTracer
             SkyList.Remove(sky);
         }
 
-        public static void Register(TracedSphere sphere)
+        public static void Register(TracedShape shape)
         {
-            if (!SphereList.Contains(sphere))
-                SphereList.Add(sphere);
+            if (!ShapeList.Contains(shape))
+                ShapeList.Add(shape);
 
             MarkChanged();
         }
 
-        public static void Unregister(TracedSphere sphere)
+        public static void Unregister(TracedShape shape)
         {
-            SphereList.Remove(sphere);
+            ShapeList.Remove(shape);
             MarkChanged();
         }
 

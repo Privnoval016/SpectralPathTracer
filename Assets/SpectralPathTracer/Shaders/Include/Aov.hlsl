@@ -3,7 +3,7 @@
 
 #include "Camera.hlsl"
 #include "Rays.hlsl"
-#include "../../Runtime/Rendering/Aov.cs.hlsl"
+#include "../../Runtime/Rendering/Settings/Aov.cs.hlsl"
 
 uint _Aov;
 float2 _DepthRange;

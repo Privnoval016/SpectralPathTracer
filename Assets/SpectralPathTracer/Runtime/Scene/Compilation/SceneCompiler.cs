@@ -87,13 +87,13 @@ namespace SpectralPathTracer
                 return true;
 
             // a moved object changes no version, so compare every transform against the last build
-            IReadOnlyList<TracedSphere> spheres = TracedRegistry.Spheres;
-            if (spheres.Count != _cachedTransforms.Count)
+            IReadOnlyList<TracedShape> shapes = TracedRegistry.Shapes;
+            if (shapes.Count != _cachedTransforms.Count)
                 return true;
 
-            for (int i = 0; i < spheres.Count; i++)
+            for (int i = 0; i < shapes.Count; i++)
             {
-                if (spheres[i].transform.localToWorldMatrix != _cachedTransforms[i])
+                if (shapes[i].transform.localToWorldMatrix != _cachedTransforms[i])
                     return true;
             }
 
@@ -107,14 +107,15 @@ namespace SpectralPathTracer
             _materialIndices.Clear();
             _defaultMaterialIndex = -1;
 
-            foreach (TracedSphere sphere in TracedRegistry.Spheres)
+            foreach (TracedShape shape in TracedRegistry.Shapes)
             {
-                // M^-T Q M^-1 moves the local quadric into world space, scale and rotation included
-                Matrix4x4 worldToLocal = sphere.transform.worldToLocalMatrix;
+                // each shape supplies its own matrices, so every record is filled the same way
                 var gpuObject = new GpuObject
                 {
-                    Quadric = worldToLocal.transpose * sphere.LocalQuadric * worldToLocal,
-                    MaterialIndex = MaterialIndex(sphere.Material)
+                    Quadric = shape.WorldQuadric,
+                    WorldToLocal = shape.WorldToShape,
+                    Type = (int)shape.Type,
+                    MaterialIndex = MaterialIndex(shape.Material)
                 };
                 _objectData.Add(gpuObject);
             }
@@ -164,8 +165,8 @@ namespace SpectralPathTracer
         private void CacheTransforms()
         {
             _cachedTransforms.Clear();
-            foreach (TracedSphere sphere in TracedRegistry.Spheres)
-                _cachedTransforms.Add(sphere.transform.localToWorldMatrix);
+            foreach (TracedShape shape in TracedRegistry.Shapes)
+                _cachedTransforms.Add(shape.transform.localToWorldMatrix);
         }
 
         /**

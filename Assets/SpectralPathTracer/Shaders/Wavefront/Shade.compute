@@ -2,7 +2,6 @@
 
 #include "../Include/Sky.hlsl"
 #include "../Include/Rays.hlsl"
-#include "../Include/Quadric.hlsl"
 #include "../Include/SceneData.hlsl"
 #include "../Include/Aov.hlsl"
 
@@ -36,7 +35,7 @@ void Shade(uint3 id : SV_DispatchThreadID)
     {
         GpuObject hitObject = LoadObject(_Objects, hit.ObjectIndex);
         float3 position = ray.Origin + hit.T * ray.Direction;
-        normal = QuadricNormal(hitObject.Quadric, position);
+        normal = ObjectNormal(hitObject, position);
         frontFace = dot(normal, ray.Direction) < 0.0f;
         albedo = LoadMaterial(_Materials, hitObject.MaterialIndex).Albedo;
     }

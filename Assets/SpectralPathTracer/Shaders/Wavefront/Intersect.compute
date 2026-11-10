@@ -1,6 +1,5 @@
 #pragma kernel Intersect
 
-#include "../Include/Quadric.hlsl"
 #include "../Include/Rays.hlsl"
 #include "../Include/SceneData.hlsl"
 
@@ -32,7 +31,7 @@ void Intersect(uint3 id : SV_DispatchThreadID)
     for (uint i = 0; i < _ObjectCount; i++)
     {
         float t;
-        bool hitObject = IntersectQuadric(LoadObject(_Objects, i).Quadric, ray.Origin, ray.Direction, 0.0f, t);
+        bool hitObject = IntersectObject(LoadObject(_Objects, i), ray.Origin, ray.Direction, 0.0f, t);
 
         if (hitObject && (hit.Hit == 0u || t < hit.T))
         {
