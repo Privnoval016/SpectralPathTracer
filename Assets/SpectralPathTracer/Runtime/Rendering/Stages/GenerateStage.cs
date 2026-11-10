@@ -33,6 +33,8 @@ namespace SpectralPathTracer
          * <summary>
          * Records the pass that writes one camera ray per pixel.
          * </summary>
+         * <param name="renderGraph">The render graph recording this frame.</param>
+         * <param name="frame">This frame's context.</param>
          * <returns>The ray buffer, valid for this frame's render graph.</returns>
          */
         public BufferHandle Record(RenderGraph renderGraph, in FrameContext frame)

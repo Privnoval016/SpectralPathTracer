@@ -10,6 +10,7 @@ struct GpuHit
 {
     float T;
     uint Hit;
+    int ObjectIndex;
 };
 
 

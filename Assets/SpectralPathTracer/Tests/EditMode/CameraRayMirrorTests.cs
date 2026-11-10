@@ -52,6 +52,9 @@ namespace SpectralPathTracer
          * <summary>
          * Runs the Generate kernel once for a Width x Height image.
          * </summary>
+         * <param name="shader">The Generate compute shader.</param>
+         * <param name="camera">The camera to generate rays for.</param>
+         * <returns>The generated rays.</returns>
          */
         private static GpuRay[] DispatchGenerate(ComputeShader shader, PinholeCamera camera)
         {

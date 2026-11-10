@@ -11,7 +11,7 @@ RWStructuredBuffer<GpuRay> _Rays;
  * Writes one camera ray per pixel into the ray buffer.
  * </summary>
  */
-[numthreads(8, 8, 1)]
+[numthreads(8, 8, 1)] // 2D dispatch
 void Generate(uint3 id : SV_DispatchThreadID)
 {
     if (any(id.xy >= _Resolution))

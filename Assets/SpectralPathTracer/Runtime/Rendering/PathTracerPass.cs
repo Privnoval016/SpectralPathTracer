@@ -19,6 +19,8 @@ namespace SpectralPathTracer
         private readonly ShadeStage _shadeStage;
         private readonly PresentStage _presentStage;
 
+        private readonly SceneCompiler _sceneCompiler = new SceneCompiler();
+
         private RTHandle _output;
 
         private bool _reportedMultipleSkies;
@@ -48,8 +50,10 @@ namespace SpectralPathTracer
 
         /**
          * <summary>
-         * Records this frame's passes: prepare the output, run the wavefront stages into it unless paused, present it.
+         * Records this frame's passes into the render graph.
          * </summary>
+         * <param name="renderGraph">The render graph recording this frame.</param>
+         * <param name="frameData">URP's per frame data for the camera and its target.</param>
          */
         public override void RecordRenderGraph(RenderGraph renderGraph, ContextContainer frameData)
         {
@@ -67,6 +71,8 @@ namespace SpectralPathTracer
 
             TextureHandle output = ImportOutput(renderGraph, cameraDesc, frame.RenderSize);
 
+            _sceneCompiler.Update();
+
             if (!_settings.Paused)
                 RecordWavefront(renderGraph, frame, output);
 
@@ -75,13 +81,14 @@ namespace SpectralPathTracer
 
         /**
          * <summary>
-         * Releases the persistent output texture.
+         * Releases the persistent output texture and scene buffers.
          * </summary>
          */
         public void Dispose()
         {
             _output?.Release();
             _output = null;
+            _sceneCompiler.Dispose();
         }
 
         #region Helpers
@@ -90,6 +97,7 @@ namespace SpectralPathTracer
          * <summary>
          * Makes sure the persistent output texture matches this frame's size and format, then imports it.
          * </summary>
+         * <param name="renderGraph">The render graph recording this frame.</param>
          * <param name="cameraDesc">The camera target's descriptor, used as the starting point.</param>
          * <param name="renderSize">The size to render at this frame.</param>
          * <returns>The output texture's handle for this frame's render graph.</returns>
@@ -112,18 +120,25 @@ namespace SpectralPathTracer
          * <summary>
          * Records the wavefront stages in order: generate camera rays, intersect them, shade the hits into the output.
          * </summary>
+         * <param name="renderGraph">The render graph recording this frame.</param>
+         * <param name="frame">This frame's context.</param>
+         * <param name="output">The texture to shade into.</param>
          */
         private void RecordWavefront(RenderGraph renderGraph, in FrameContext frame, TextureHandle output)
         {
+            SceneBuffers scene = _sceneCompiler.Import(renderGraph);
+
             BufferHandle rays = _generateStage.Record(renderGraph, frame);
-            BufferHandle hits = _intersectStage.Record(renderGraph, frame, rays);
-            _shadeStage.Record(renderGraph, frame, rays, hits, output);
+            BufferHandle hits = _intersectStage.Record(renderGraph, frame, rays, scene);
+            _shadeStage.Record(renderGraph, frame, rays, hits, output, scene);
         }
 
         /**
         * <summary>
         * Picks this frame's sky.
         * </summary>
+        * <param name="sky">The sky to render with.</param>
+        * <returns>False if more than one Sky is enabled.</returns>
         */
         private bool TryResolveSky(out SkyColors sky)
         {

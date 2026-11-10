@@ -2,12 +2,15 @@
 
 #include "../Include/Sky.hlsl"
 #include "../Include/Rays.hlsl"
-#include "../Include/TestScene.hlsl"
+#include "../Include/Quadric.hlsl"
+#include "../Include/SceneData.hlsl"
 #include "../Include/Aov.hlsl"
 
 uint _RayCount;
 StructuredBuffer<GpuRay> _Rays;
 StructuredBuffer<GpuHit> _Hits;
+StructuredBuffer<GpuObject> _Objects;
+StructuredBuffer<GpuMaterial> _Materials;
 RWTexture2D<float4> _Output;
 
 /**
@@ -25,15 +28,24 @@ void Shade(uint3 id : SV_DispatchThreadID)
     GpuHit hit = LoadHit(_Hits, id.x);
 
     // rebuild the hit from the ray instead of storing it
-    float3 position = ray.Origin + hit.T * ray.Direction;
-    float3 normal = QuadricNormal(TestSphereQuadric(), position);
-    bool frontFace = dot(normal, ray.Direction) < 0.0f;
+    float3 normal = float3(0.0f, 0.0f, 0.0f);
+    bool frontFace = true;
+    float3 albedo = float3(0.0f, 0.0f, 0.0f);
+
+    if (hit.Hit != 0u)
+    {
+        GpuObject hitObject = LoadObject(_Objects, hit.ObjectIndex);
+        float3 position = ray.Origin + hit.T * ray.Direction;
+        normal = QuadricNormal(hitObject.Quadric, position);
+        frontFace = dot(normal, ray.Direction) < 0.0f;
+        albedo = LoadMaterial(_Materials, hitObject.MaterialIndex).Albedo;
+    }
 
     float3 color;
     if (_Aov != AOV_NONE)
         color = AovColor(ray, hit, normal, frontFace);
     else
-        color = hit.Hit != 0u ? float3(1.0f, 1.0f, 1.0f) : SkyRadiance(ray.Direction);
+        color = hit.Hit != 0u ? albedo : SkyRadiance(ray.Direction);
 
     _Output[ray.Pixel] = float4(color, 1.0f);
 }

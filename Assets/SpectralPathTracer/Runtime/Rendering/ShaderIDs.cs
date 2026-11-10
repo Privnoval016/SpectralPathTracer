@@ -11,6 +11,10 @@ namespace SpectralPathTracer
         public static readonly int RaysID = Shader.PropertyToID("_Rays");
         public static readonly int HitsID = Shader.PropertyToID("_Hits");
 
+        public static readonly int ObjectsID = Shader.PropertyToID("_Objects");
+        public static readonly int MaterialsID = Shader.PropertyToID("_Materials");
+        public static readonly int ObjectCountID = Shader.PropertyToID("_ObjectCount");
+
         public static readonly int CameraToWorldID = Shader.PropertyToID("_CameraToWorld");
         public static readonly int TanHalfFovYID = Shader.PropertyToID("_TanHalfFov");
         public static readonly int AspectRatioID = Shader.PropertyToID("_AspectRatio");

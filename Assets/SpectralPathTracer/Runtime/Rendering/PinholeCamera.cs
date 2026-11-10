@@ -17,6 +17,9 @@ namespace SpectralPathTracer
          * <summary>
          * Creates a pinhole camera.
          * </summary>
+         * <param name="cameraToWorld">The camera's local-to-world matrix.</param>
+         * <param name="tanHalfFov">The tangent of half the vertical field of view.</param>
+         * <param name="aspectRatio">The image's width over its height.</param>
          */
         public PinholeCamera(Matrix4x4 cameraToWorld, float tanHalfFov, float aspectRatio)
         {
@@ -29,6 +32,9 @@ namespace SpectralPathTracer
          * <summary>
          * Builds the pinhole camera for a Unity camera rendering at the settings' output resolution.
          * </summary>
+         * <param name="camera">The Unity camera.</param>
+         * <param name="settings">The path tracer settings.</param>
+         * <returns>The matching pinhole camera.</returns>
          */
         public static PinholeCamera From(Camera camera, PathTracerSettings settings)
         {

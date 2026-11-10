@@ -26,6 +26,9 @@ namespace SpectralPathTracer
             public PinholeCamera Camera;
             public Aov Aov;
             public Vector2 DepthRange;
+
+            public BufferHandle Objects;
+            public BufferHandle Materials;
         }
 
         public ShadeStage(ComputeShader shader) : base(shader, KernelName)
@@ -36,11 +39,14 @@ namespace SpectralPathTracer
          * <summary>
          * Records the pass that turns each ray's hit into a color in the output texture.
          * </summary>
+         * <param name="renderGraph">The render graph recording this frame.</param>
+         * <param name="frame">This frame's context.</param>
          * <param name="rays">The ray buffer written by the generate stage.</param>
          * <param name="hits">The hit buffer written by the intersect stage.</param>
          * <param name="output">The texture each ray's color is written into.</param>
+         * <param name="scene">The scene's object and material buffers, imported this frame.</param>
          */
-        public void Record(RenderGraph renderGraph, in FrameContext frame, BufferHandle rays, BufferHandle hits, TextureHandle output)
+        public void Record(RenderGraph renderGraph, in FrameContext frame, BufferHandle rays, BufferHandle hits, TextureHandle output, in SceneBuffers scene)
         {
             using var builder = renderGraph.AddComputePass("Path Tracer: Shade", out PassData passData);
 
@@ -57,9 +63,14 @@ namespace SpectralPathTracer
             passData.Aov = frame.Aov;
             passData.DepthRange = frame.DepthRange;
 
+            passData.Objects = scene.Objects;
+            passData.Materials = scene.Materials;
+
             builder.UseBuffer(rays, AccessFlags.Read);
             builder.UseBuffer(hits, AccessFlags.Read);
             builder.UseTexture(output, AccessFlags.Write);
+            builder.UseBuffer(scene.Objects, AccessFlags.Read);
+            builder.UseBuffer(scene.Materials, AccessFlags.Read);
 
             // static to reject captured variables from the outer scope
             builder.SetRenderFunc(static (PassData data, ComputeGraphContext context) =>
@@ -75,6 +86,8 @@ namespace SpectralPathTracer
                 SetCamera(cmd, data.Shader, data.Camera);
                 cmd.SetComputeIntParam(data.Shader, ShaderIDs.AovID, (int)data.Aov);
                 cmd.SetComputeVectorParam(data.Shader, ShaderIDs.DepthRangeID, data.DepthRange);
+                cmd.SetComputeBufferParam(data.Shader, data.Kernel, ShaderIDs.ObjectsID, data.Objects);
+                cmd.SetComputeBufferParam(data.Shader, data.Kernel, ShaderIDs.MaterialsID, data.Materials);
                 cmd.DispatchCompute(data.Shader, data.Kernel, data.Groups, 1, 1);
             });
         }

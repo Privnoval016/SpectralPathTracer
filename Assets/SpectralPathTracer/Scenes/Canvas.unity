@@ -430,6 +430,52 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &2144420932
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2144420934}
+  - component: {fileID: 2144420933}
+  m_Layer: 0
+  m_Name: TracedSphere (1)
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &2144420933
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2144420932}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 41b652d75e1884fdd9fcddf90c64dad4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: SpectralPathTracer::SpectralPathTracer.TracedSphere
+  <Radius>k__BackingField: 0.5
+  <Material>k__BackingField: {fileID: 11400000, guid: 5934468b9a91a46a2bd15ca6b5cbec4e, type: 2}
+--- !u!4 &2144420934
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2144420932}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0.051265072, y: -0.26583531, z: 0.024923183, w: 0.9623318}
+  m_LocalPosition: {x: 2.43266, y: -0, z: 4.91}
+  m_LocalScale: {x: 1, y: 4.51, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: -4.9, y: -31.07, z: 4.33}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
@@ -437,3 +483,4 @@ SceneRoots:
   - {fileID: 1156157387}
   - {fileID: 811309782}
   - {fileID: 2036577450}
+  - {fileID: 2144420934}

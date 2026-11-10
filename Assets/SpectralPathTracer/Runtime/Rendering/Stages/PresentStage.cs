@@ -17,6 +17,11 @@ namespace SpectralPathTracer
          * Records the raster pass that clears the camera target to black and draws the output into its
          * letterboxed rectangle.
          * </summary>
+         * <param name="renderGraph">The render graph recording this frame.</param>
+         * <param name="source">The path tracer's output texture.</param>
+         * <param name="target">The camera's color target.</param>
+         * <param name="targetDesc">The camera target's descriptor.</param>
+         * <param name="outputResolution">The output resolution.</param>
          */
         public void Record(RenderGraph renderGraph, TextureHandle source, TextureHandle target, TextureDesc targetDesc, Vector2Int outputResolution)
         {
@@ -45,6 +50,9 @@ namespace SpectralPathTracer
          * <summary>
          * The largest rectangle with the image's aspect ratio that fits inside the target, centered.
          * </summary>
+         * <param name="image">The image's size.</param>
+         * <param name="target">The target's size.</param>
+         * <returns>The centered rectangle.</returns>
          */
         private static Rect FitInside(Vector2Int image, Vector2Int target)
         {

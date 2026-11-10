@@ -2,11 +2,13 @@
 
 #include "../Include/Quadric.hlsl"
 #include "../Include/Rays.hlsl"
-#include "../Include/TestScene.hlsl"
+#include "../Include/SceneData.hlsl"
 
 uint _RayCount;
+uint _ObjectCount;
 StructuredBuffer<GpuRay> _Rays;
 RWStructuredBuffer<GpuHit> _Hits;
+StructuredBuffer<GpuObject> _Objects;
 
 /**
  * <summary>
@@ -22,8 +24,23 @@ void Intersect(uint3 id : SV_DispatchThreadID)
     GpuRay ray = LoadRay(_Rays, id.x);
 
     GpuHit hit;
-    float4x4 sphereQuadric = TestSphereQuadric();
-    hit.Hit = IntersectQuadric(sphereQuadric, ray.Origin, ray.Direction, 0.0f, hit.T) ? 1u : 0u;
+    hit.T = 0.0f;
+    hit.Hit = 0u;
+    hit.ObjectIndex = -1;
+
+    // keep the nearest hit across every object; with no objects the loop never runs and the ray misses
+    for (uint i = 0; i < _ObjectCount; i++)
+    {
+        float t;
+        bool hitObject = IntersectQuadric(LoadObject(_Objects, i).Quadric, ray.Origin, ray.Direction, 0.0f, t);
+
+        if (hitObject && (hit.Hit == 0u || t < hit.T))
+        {
+            hit.T = t;
+            hit.Hit = 1u;
+            hit.ObjectIndex = (int)i;
+        }
+    }
 
     StoreHit(_Hits, id.x, hit);
 }

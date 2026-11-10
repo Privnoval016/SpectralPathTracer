@@ -158,6 +158,8 @@ namespace SpectralPathTracer
          * The kernel's direction-to-color mapping, gamma encoded so the Scene view lines match the colors
          * the Game view displays.
          * </summary>
+         * <param name="direction">The ray's direction.</param>
+         * <returns>The ray's color.</returns>
          */
         private static Color DirectionColor(Vector3 direction)
         {

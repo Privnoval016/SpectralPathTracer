@@ -36,6 +36,9 @@ namespace SpectralPathTracer
          * <summary>
          * Number of thread groups needed to cover <paramref name="size"/> threads, rounded up.
          * </summary>
+         * <param name="size">The number of threads.</param>
+         * <param name="groupSize">The thread group size.</param>
+         * <returns>The number of thread groups.</returns>
          */
         protected static int GroupCount(int size, int groupSize) => (size + groupSize - 1) / groupSize;
 

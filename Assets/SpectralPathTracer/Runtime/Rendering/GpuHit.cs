@@ -9,5 +9,6 @@ namespace SpectralPathTracer
     {
         public float T;
         public uint Hit;
+        public int ObjectIndex; // -1 on a miss
     }
 }
