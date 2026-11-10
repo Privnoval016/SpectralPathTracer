@@ -18,6 +18,7 @@ namespace SpectralPathTracer
             public ComputeShader Shader;
             public int Kernel;
             public BufferHandle Rays;
+            public BufferHandle Paths;
             public BufferHandle Hits;
             public int RayCount;
             public int Groups;
@@ -36,11 +37,11 @@ namespace SpectralPathTracer
          * </summary>
          * <param name="renderGraph">The render graph recording this frame.</param>
          * <param name="frame">This frame's context.</param>
-         * <param name="rays">The ray buffer written by the generate stage.</param>
+         * <param name="paths">The rays to trace and their path states.</param>
          * <param name="scene">The scene's object buffer, imported this frame.</param>
          * <returns>The hit buffer, one hit per ray, valid for this frame's render graph.</returns>
          */
-        public BufferHandle Record(RenderGraph renderGraph, in FrameContext frame, BufferHandle rays, in SceneBuffers scene)
+        public BufferHandle Record(RenderGraph renderGraph, in FrameContext frame, in PathBuffers paths, in SceneBuffers scene)
         {
             var desc = new BufferDesc(frame.RayCount, UnsafeUtility.SizeOf<GpuHit>(), GraphicsBuffer.Target.Structured) { name = "PathTracerHits" };
             BufferHandle hits = renderGraph.CreateBuffer(desc);
@@ -49,7 +50,8 @@ namespace SpectralPathTracer
 
             passData.Shader = Shader;
             passData.Kernel = Kernel;
-            passData.Rays = rays;
+            passData.Rays = paths.Rays;
+            passData.Paths = paths.Paths;
             passData.Hits = hits;
             passData.RayCount = frame.RayCount;
             passData.Groups = GroupCount(frame.RayCount, GroupSizeX);
@@ -57,7 +59,8 @@ namespace SpectralPathTracer
             passData.Objects = scene.Objects;
             passData.ObjectCount = scene.ObjectCount;
 
-            builder.UseBuffer(rays, AccessFlags.Read);
+            builder.UseBuffer(paths.Rays, AccessFlags.Read);
+            builder.UseBuffer(paths.Paths, AccessFlags.Read);
             builder.UseBuffer(hits, AccessFlags.Write);
             builder.UseBuffer(scene.Objects, AccessFlags.Read);
 
@@ -66,6 +69,7 @@ namespace SpectralPathTracer
             {
                 var cmd = context.cmd;
                 cmd.SetComputeBufferParam(data.Shader, data.Kernel, ShaderIDs.RaysID, data.Rays);
+                cmd.SetComputeBufferParam(data.Shader, data.Kernel, ShaderIDs.PathsID, data.Paths);
                 cmd.SetComputeBufferParam(data.Shader, data.Kernel, ShaderIDs.HitsID, data.Hits);
                 cmd.SetComputeIntParam(data.Shader, ShaderIDs.RayCountID, data.RayCount);
                 cmd.SetComputeBufferParam(data.Shader, data.Kernel, ShaderIDs.ObjectsID, data.Objects);

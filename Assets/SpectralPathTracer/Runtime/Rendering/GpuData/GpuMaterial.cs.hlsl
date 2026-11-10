@@ -9,6 +9,7 @@
 struct GpuMaterial
 {
     float3 Albedo;
+    float3 Emission;
 };
 
 

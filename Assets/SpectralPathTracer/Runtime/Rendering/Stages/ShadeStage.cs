@@ -18,7 +18,9 @@ namespace SpectralPathTracer
             public int Kernel;
             public BufferHandle Rays;
             public BufferHandle Hits;
-            public TextureHandle Output;
+            public BufferHandle Paths;
+            public int Depth;
+            public int MaxBounces;
             public int RayCount;
             public int Groups;
 
@@ -45,20 +47,22 @@ namespace SpectralPathTracer
          * </summary>
          * <param name="renderGraph">The render graph recording this frame.</param>
          * <param name="frame">This frame's context.</param>
-         * <param name="rays">The ray buffer written by the generate stage.</param>
+         * <param name="paths">The rays and path states, where each path's state is updated by this stage.</param>
          * <param name="hits">The hit buffer written by the intersect stage.</param>
-         * <param name="output">The texture each ray's color is written into.</param>
          * <param name="scene">The scene's object and material buffers, imported this frame.</param>
+         * <param name="depth">Which hit along the path this is; 0 is the camera ray's.</param>
          */
-        public void Record(RenderGraph renderGraph, in FrameContext frame, BufferHandle rays, BufferHandle hits, TextureHandle output, in SceneBuffers scene)
+        public void Record(RenderGraph renderGraph, in FrameContext frame, in PathBuffers paths, BufferHandle hits, in SceneBuffers scene, int depth)
         {
             using var builder = renderGraph.AddComputePass("Path Tracer: Shade", out PassData passData);
 
             passData.Shader = Shader;
             passData.Kernel = Kernel;
-            passData.Rays = rays;
+            passData.Rays = paths.Rays;
             passData.Hits = hits;
-            passData.Output = output;
+            passData.Paths = paths.Paths;
+            passData.Depth = depth;
+            passData.MaxBounces = frame.MaxBounces;
             passData.RayCount = frame.RayCount;
             passData.Groups = GroupCount(frame.RayCount, GroupSizeX);
 
@@ -74,9 +78,9 @@ namespace SpectralPathTracer
             passData.Objects = scene.Objects;
             passData.Materials = scene.Materials;
 
-            builder.UseBuffer(rays, AccessFlags.Read);
+            builder.UseBuffer(paths.Rays, AccessFlags.ReadWrite);
             builder.UseBuffer(hits, AccessFlags.Read);
-            builder.UseTexture(output, AccessFlags.Write);
+            builder.UseBuffer(paths.Paths, AccessFlags.ReadWrite);
             builder.UseBuffer(scene.Objects, AccessFlags.Read);
             builder.UseBuffer(scene.Materials, AccessFlags.Read);
 
@@ -86,7 +90,9 @@ namespace SpectralPathTracer
                 var cmd = context.cmd;
                 cmd.SetComputeBufferParam(data.Shader, data.Kernel, ShaderIDs.RaysID, data.Rays);
                 cmd.SetComputeBufferParam(data.Shader, data.Kernel, ShaderIDs.HitsID, data.Hits);
-                cmd.SetComputeTextureParam(data.Shader, data.Kernel, ShaderIDs.OutputID, data.Output);
+                cmd.SetComputeBufferParam(data.Shader, data.Kernel, ShaderIDs.PathsID, data.Paths);
+                cmd.SetComputeIntParam(data.Shader, ShaderIDs.DepthID, data.Depth);
+                cmd.SetComputeIntParam(data.Shader, ShaderIDs.MaxBouncesID, data.MaxBounces);
                 cmd.SetComputeIntParam(data.Shader, ShaderIDs.RayCountID, data.RayCount);
                 cmd.SetComputeVectorParam(data.Shader, ShaderIDs.SkyZenithID, data.Sky.Zenith.linear);
                 cmd.SetComputeVectorParam(data.Shader, ShaderIDs.SkyHorizonID, data.Sky.Horizon.linear);

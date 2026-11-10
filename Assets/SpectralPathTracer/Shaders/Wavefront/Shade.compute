@@ -2,19 +2,25 @@
 
 #include "../Include/Sky.hlsl"
 #include "../Include/Rays.hlsl"
+#include "../Include/PathState.hlsl"
 #include "../Include/SceneData.hlsl"
 #include "../Include/Aov.hlsl"
+#include "../Include/RayOffset.hlsl"
+#include "../Include/Sampler.hlsl"
+#include "../Include/Sampling.hlsl"
 
 uint _RayCount;
-StructuredBuffer<GpuRay> _Rays;
+uint _Depth;
+uint _MaxBounces;
+RWStructuredBuffer<GpuRay> _Rays;
 StructuredBuffer<GpuHit> _Hits;
 StructuredBuffer<GpuObject> _Objects;
 StructuredBuffer<GpuMaterial> _Materials;
-RWTexture2D<float4> _Output;
+RWStructuredBuffer<GpuPathState> _Paths;
 
 /**
  * <summary>
- * Turns each ray's hit into a color and writes it to the ray's pixel.
+ * Adds the light each path finds at its hit, then samples the path's next bounce or finishes it.
  * </summary>
  */
 [numthreads(64, 1, 1)]
@@ -23,28 +29,58 @@ void Shade(uint3 id : SV_DispatchThreadID)
     if (id.x >= _RayCount)
         return;
 
+    GpuPathState path = LoadPath(_Paths, id.x);
+    if (path.Active == 0u)
+        return;
+
     GpuRay ray = LoadRay(_Rays, id.x);
     GpuHit hit = LoadHit(_Hits, id.x);
 
     // rebuild the hit from the ray instead of storing it
+    float3 position = float3(0.0f, 0.0f, 0.0f);
     float3 normal = float3(0.0f, 0.0f, 0.0f);
     bool frontFace = true;
-    float3 albedo = float3(0.0f, 0.0f, 0.0f);
+    GpuMaterial material = (GpuMaterial)0;
 
     if (hit.Hit != 0u)
     {
         GpuObject hitObject = LoadObject(_Objects, hit.ObjectIndex);
-        float3 position = ray.Origin + hit.T * ray.Direction;
+        position = ray.Origin + hit.T * ray.Direction;
         normal = ObjectNormal(hitObject, position);
         frontFace = dot(normal, ray.Direction) < 0.0f;
-        albedo = LoadMaterial(_Materials, hitObject.MaterialIndex).Albedo;
+        material = LoadMaterial(_Materials, hitObject.MaterialIndex);
     }
 
-    float3 color;
-    if (_Aov != AOV_NONE)
-        color = AovColor(ray, hit, normal, frontFace);
+    if (_Depth == 0u && _Aov != AOV_NONE)
+    {
+        path.Radiance = AovColor(ray, hit, normal, frontFace);
+        path.Active = 0u;
+    }
+    else if (hit.Hit == 0u)
+    {
+        path.Radiance += path.Throughput * SkyRadiance(ray.Direction); // the sky is a light too
+        path.Active = 0u;
+    }
     else
-        color = hit.Hit != 0u ? albedo : SkyRadiance(ray.Direction);
+    {
+        if (frontFace)
+            path.Radiance += path.Throughput * material.Emission; // lights emit from their front only
 
-    _Output[ray.Pixel] = float4(color, 1.0f);
+        if (_Depth < _MaxBounces)
+        {
+            float3 facing = frontFace ? normal : -normal;
+            uint2 pixel = OutputPixel(ray.Pixel);
+            float2 u = float2(SampleUniform(pixel, _SampleIndex, BounceDimension(_Depth, SLOT_BSDF_U)),
+                              SampleUniform(pixel, _SampleIndex, BounceDimension(_Depth, SLOT_BSDF_V)));
+
+            ray.Origin = OffsetRayOrigin(position, facing);
+            ray.Direction = LocalToWorld(SampleCosineHemisphere(u), facing);
+            path.Throughput *= material.Albedo; // (albedo / pi) * cos / (cos / pi): the cosines and pis cancel
+            StoreRay(_Rays, id.x, ray);
+        }
+        else
+            path.Active = 0u;
+    }
+
+    StorePath(_Paths, id.x, path);
 }

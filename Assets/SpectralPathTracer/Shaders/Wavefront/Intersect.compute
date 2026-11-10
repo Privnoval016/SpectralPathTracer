@@ -1,11 +1,13 @@
 #pragma kernel Intersect
 
 #include "../Include/Rays.hlsl"
+#include "../Include/PathState.hlsl"
 #include "../Include/SceneData.hlsl"
 
 uint _RayCount;
 uint _ObjectCount;
 StructuredBuffer<GpuRay> _Rays;
+StructuredBuffer<GpuPathState> _Paths;
 RWStructuredBuffer<GpuHit> _Hits;
 StructuredBuffer<GpuObject> _Objects;
 
@@ -18,6 +20,10 @@ StructuredBuffer<GpuObject> _Objects;
 void Intersect(uint3 id : SV_DispatchThreadID)
 {
     if (id.x >= _RayCount)
+        return;
+
+    // a finished path has no ray left to trace
+    if (LoadPath(_Paths, id.x).Active == 0u)
         return;
 
     GpuRay ray = LoadRay(_Rays, id.x);

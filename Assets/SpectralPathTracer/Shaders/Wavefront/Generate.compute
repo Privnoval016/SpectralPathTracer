@@ -2,9 +2,11 @@
 
 #include "../Include/Camera.hlsl"
 #include "../Include/Rays.hlsl"
+#include "../Include/PathState.hlsl"
 
 uint2 _Resolution;
 RWStructuredBuffer<GpuRay> _Rays;
+RWStructuredBuffer<GpuPathState> _Paths;
 
 /**
  * <summary>
@@ -25,4 +27,11 @@ void Generate(uint3 id : SV_DispatchThreadID)
     ray.Pixel = int2(id.xy);
 
     StoreRay(_Rays, id.x + id.y * _Resolution.x, ray); // rays are stored row after row
+
+    // nothing gathered yet
+    GpuPathState path;
+    path.Radiance = float3(0.0f, 0.0f, 0.0f);
+    path.Throughput = float3(1.0f, 1.0f, 1.0f);
+    path.Active = 1u;
+    StorePath(_Paths, id.x + id.y * _Resolution.x, path);
 }

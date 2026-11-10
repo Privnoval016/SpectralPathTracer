@@ -21,6 +21,19 @@ GpuRay LoadRay(StructuredBuffer<GpuRay> rays, uint index)
 
 /**
  * <summary>
+ * Reads a ray from a ray buffer the kernel also writes.
+ * </summary>
+ * <param name="rays">The buffer to read from.</param>
+ * <param name="index">The index of the ray in the buffer.</param>
+ * <returns>The ray at the given index.</returns>
+ */
+GpuRay LoadRay(RWStructuredBuffer<GpuRay> rays, uint index)
+{
+    return rays[index];
+}
+
+/**
+ * <summary>
  * Writes a ray into a ray buffer.
  * </summary>
  * <param name="rays">The buffer to write to.</param>

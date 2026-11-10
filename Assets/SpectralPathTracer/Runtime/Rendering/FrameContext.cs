@@ -23,6 +23,7 @@ namespace SpectralPathTracer
         public Vector2 OutputScale => new Vector2((float)OutputSize.x / RenderSize.x, (float)OutputSize.y / RenderSize.y);
 
         public uint SampleIndex { get; }
+        public int MaxBounces { get; }
         public PinholeCamera Camera { get; }
         public SkyColors Sky { get; }
         public Aov Aov { get; }
@@ -31,11 +32,12 @@ namespace SpectralPathTracer
 
         #endregion
 
-        public FrameContext(Vector2Int renderSize, Vector2Int outputSize, uint sampleIndex, PinholeCamera camera, SkyColors sky, Aov aov, Vector2 depthRange, int noiseDimension)
+        public FrameContext(Vector2Int renderSize, Vector2Int outputSize, uint sampleIndex, int maxBounces, PinholeCamera camera, SkyColors sky, Aov aov, Vector2 depthRange, int noiseDimension)
         {
             RenderSize = renderSize;
             OutputSize = outputSize;
             SampleIndex = sampleIndex;
+            MaxBounces = maxBounces;
             Camera = camera;
             Sky = sky;
             Aov = aov;

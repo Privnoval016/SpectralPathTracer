@@ -132,24 +132,29 @@ namespace SpectralPathTracer
             if (material == null)
             {
                 if (_defaultMaterialIndex < 0)
-                    _defaultMaterialIndex = AddMaterial(DefaultAlbedo);
+                    _defaultMaterialIndex = AddMaterial(DefaultAlbedo, Color.black, 0f);
 
                 return _defaultMaterialIndex;
             }
 
             if (!_materialIndices.TryGetValue(material, out int index))
             {
-                index = AddMaterial(material.Albedo);
+                index = AddMaterial(material.Albedo, material.EmissionColor, material.EmissionStrength);
                 _materialIndices.Add(material, index);
             }
 
             return index;
         }
 
-        private int AddMaterial(Color albedo)
+        private int AddMaterial(Color albedo, Color emissionColor, float emissionStrength)
         {
-            Color linear = albedo.linear;
-            _materialData.Add(new GpuMaterial { Albedo = new Vector3(linear.r, linear.g, linear.b) });
+            Color linearAlbedo = albedo.linear;
+            Color emission = emissionColor.linear * emissionStrength;
+            _materialData.Add(new GpuMaterial
+            {
+                Albedo = new Vector3(linearAlbedo.r, linearAlbedo.g, linearAlbedo.b),
+                Emission = new Vector3(emission.r, emission.g, emission.b)
+            });
             return _materialData.Count - 1;
         }
 

@@ -1,0 +1,24 @@
+#pragma kernel Resolve
+
+#include "../Include/Rays.hlsl"
+#include "../Include/PathState.hlsl"
+
+uint _RayCount;
+StructuredBuffer<GpuRay> _Rays;
+StructuredBuffer<GpuPathState> _Paths;
+RWTexture2D<float4> _Output;
+
+/**
+ * <summary>
+ * Writes each path's gathered radiance to its pixel.
+ * </summary>
+ */
+[numthreads(64, 1, 1)]
+void Resolve(uint3 id : SV_DispatchThreadID)
+{
+    if (id.x >= _RayCount)
+        return;
+
+    // the ray keeps its pixel through every bounce, so it still says where this path belongs
+    _Output[LoadRay(_Rays, id.x).Pixel] = float4(LoadPath(_Paths, id.x).Radiance, 1.0f);
+}

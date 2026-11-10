@@ -15,3 +15,4 @@ MonoBehaviour:
   <Generate>k__BackingField: {fileID: 7200000, guid: a493b7ac33fb74dd4bb31725da6672ac, type: 3}
   <Intersect>k__BackingField: {fileID: 7200000, guid: 6fa9620282252417b8035edcfd733019, type: 3}
   <Shade>k__BackingField: {fileID: 7200000, guid: 04df1ca2a02534c4c91343bd135cbe4f, type: 3}
+  <Resolve>k__BackingField: {fileID: 7200000, guid: 096caf7e170f54725af1dc09f7e83b58, type: 3}

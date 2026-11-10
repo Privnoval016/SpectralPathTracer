@@ -9,5 +9,6 @@ namespace SpectralPathTracer
     public struct GpuMaterial
     {
         public Vector3 Albedo; // linear
+        public Vector3 Emission; // linear radiance: color times strength
     }
 }

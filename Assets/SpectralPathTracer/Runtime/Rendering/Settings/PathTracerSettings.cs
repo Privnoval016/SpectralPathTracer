@@ -21,13 +21,17 @@ namespace SpectralPathTracer
         [SerializeField, Range(0.1f, 1f)] private float playModeScale = 1f;
 
 
-        [Header("Renderer Settings")]
+        [field: Header("Renderer Settings")]
 
         [field: Tooltip("Whether to pause the path tracer.")]
         [field: SerializeField] public bool Paused { get; private set; } = false;
 
         [field: Tooltip("Size of the final image in pixels, independent of the Game view size.")]
         [field: SerializeField] public Vector2Int OutputResolution { get; private set; } = new Vector2Int(1920, 1080);
+
+        [field: Tooltip("How many times a path may bounce after the camera ray's first hit.")]
+        [field: Range(0, 16)]
+        [field: SerializeField] public int MaxBounces { get; private set; } = 1;
 
 
         #endregion

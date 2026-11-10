@@ -10,7 +10,7 @@ namespace SpectralPathTracer
         [field: Tooltip("What the image shows instead of the rendered result.")]
         [field: SerializeField] public Aov Aov { get; private set; } = Aov.None;
 
-        [Header("Depth")]
+        [field: Header("Depth")]
 
         [field: Tooltip("Planar depth shown as black.")]
         [field: SerializeField] public float DepthNear { get; private set; } = 0f;
@@ -18,7 +18,7 @@ namespace SpectralPathTracer
         [field: Tooltip("Planar depth shown as white.")]
         [field: SerializeField] public float DepthFar { get; private set; } = 20f;
 
-        [Header("Noise")]
+        [field: Header("Noise")]
         [field: Tooltip("Which dimension of the noise to show. 0 = first dimension, 1 = second dimension, etc.")]
         [field: Min(0)]
         [field: SerializeField] public int NoiseDimension { get; private set; } = 0;

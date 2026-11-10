@@ -17,6 +17,7 @@ namespace SpectralPathTracer
         private readonly GenerateStage _generateStage;
         private readonly IntersectStage _intersectStage;
         private readonly ShadeStage _shadeStage;
+        private readonly ResolveStage _resolveStage;
         private readonly PresentStage _presentStage;
 
         private readonly SceneCompiler _sceneCompiler = new SceneCompiler();
@@ -45,6 +46,7 @@ namespace SpectralPathTracer
             _generateStage = new GenerateStage(shaders.Generate);
             _intersectStage = new IntersectStage(shaders.Intersect);
             _shadeStage = new ShadeStage(shaders.Shade);
+            _resolveStage = new ResolveStage(shaders.Resolve);
             _presentStage = new PresentStage();
 
             requiresIntermediateTexture = true;
@@ -69,7 +71,7 @@ namespace SpectralPathTracer
             UniversalResourceData resourceData = frameData.Get<UniversalResourceData>();
             TextureDesc cameraDesc = renderGraph.GetTextureDesc(resourceData.activeColorTexture);
             var depthRange = new Vector2(_aovSettings.DepthNear, _aovSettings.DepthFar);
-            var frame = new FrameContext(_settings.RenderResolution, _settings.OutputResolution, _sampleIndex, PinholeCamera.From(cameraData.camera, _settings), skyColors, _aovSettings.Aov, depthRange, _aovSettings.NoiseDimension);
+            var frame = new FrameContext(_settings.RenderResolution, _settings.OutputResolution, _sampleIndex, _settings.MaxBounces, PinholeCamera.From(cameraData.camera, _settings), skyColors, _aovSettings.Aov, depthRange, _aovSettings.NoiseDimension);
 
             TextureHandle output = ImportOutput(renderGraph, cameraDesc, frame.RenderSize);
 
@@ -123,19 +125,26 @@ namespace SpectralPathTracer
 
         /**
          * <summary>
-         * Records the wavefront stages in order: generate camera rays, intersect them, shade the hits into the output.
+         * Records the wavefront stages: generate camera rays, intersect and shade once per bounce, then resolve every path into the output.
          * </summary>
          * <param name="renderGraph">The render graph recording this frame.</param>
          * <param name="frame">This frame's context.</param>
-         * <param name="output">The texture to shade into.</param>
+         * <param name="output">The texture to resolve into.</param>
          */
         private void RecordWavefront(RenderGraph renderGraph, in FrameContext frame, TextureHandle output)
         {
             SceneBuffers scene = _sceneCompiler.Import(renderGraph);
 
-            BufferHandle rays = _generateStage.Record(renderGraph, frame);
-            BufferHandle hits = _intersectStage.Record(renderGraph, frame, rays, scene);
-            _shadeStage.Record(renderGraph, frame, rays, hits, output, scene);
+            PathBuffers paths = _generateStage.Record(renderGraph, frame);
+
+            // depth 0 is the camera ray's hit, so MaxBounces bounces need MaxBounces + 1 trips around the loop
+            for (int depth = 0; depth <= frame.MaxBounces; depth++)
+            {
+                BufferHandle hits = _intersectStage.Record(renderGraph, frame, paths, scene);
+                _shadeStage.Record(renderGraph, frame, paths, hits, scene, depth);
+            }
+
+            _resolveStage.Record(renderGraph, frame, paths, output);
         }
 
         /**

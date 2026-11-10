@@ -13,14 +13,17 @@ namespace SpectralPathTracer
         [field: Tooltip("Finds where each ray hits the scene.")]
         [field: SerializeField] public ComputeShader Intersect { get; private set; }
 
-        [field: Tooltip("Turns each hit into a color in the output texture.")]
+        [field: Tooltip("Turns each hit into light and the next bounce.")]
         [field: SerializeField] public ComputeShader Shade { get; private set; }
+
+        [field: Tooltip("Writes each path's gathered light to its pixel.")]
+        [field: SerializeField] public ComputeShader Resolve { get; private set; }
 
         #endregion
 
         #region Properties
 
-        public bool IsComplete => Generate != null && Intersect != null && Shade != null;
+        public bool IsComplete => Generate != null && Intersect != null && Shade != null && Resolve != null;
 
         #endregion
     }

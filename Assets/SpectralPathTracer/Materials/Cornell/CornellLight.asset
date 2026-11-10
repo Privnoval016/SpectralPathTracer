@@ -13,3 +13,5 @@ MonoBehaviour:
   m_Name: CornellLight
   m_EditorClassIdentifier: SpectralPathTracer::SpectralPathTracer.SpectralMaterial
   <Albedo>k__BackingField: {r: 0.8962438, g: 0.8962438, b: 0.8962438, a: 1}
+  <EmissionColor>k__BackingField: {r: 1, g: 0.8511141, b: 0.52232945, a: 1}
+  <EmissionStrength>k__BackingField: 17

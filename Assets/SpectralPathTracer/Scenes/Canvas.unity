@@ -412,9 +412,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2b1bf8fb03f044da89870d1406ef7a33, type: 3}
   m_Name: 
   m_EditorClassIdentifier: SpectralPathTracer::SpectralPathTracer.Sky
-  zenithColor: {r: 0.25, g: 0.45, b: 0.85, a: 1}
-  horizonColor: {r: 0.85, g: 0.9, b: 1, a: 1}
-  groundColor: {r: 0.3, g: 0.28, b: 0.25, a: 1}
+  zenithColor: {r: 0, g: 0, b: 0, a: 1}
+  horizonColor: {r: 0, g: 0, b: 0, a: 1}
+  groundColor: {r: 0, g: 0, b: 0, a: 1}
 --- !u!4 &2036577450
 Transform:
   m_ObjectHideFlags: 0
