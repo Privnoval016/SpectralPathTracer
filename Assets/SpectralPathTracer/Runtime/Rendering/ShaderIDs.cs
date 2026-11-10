@@ -25,5 +25,9 @@ namespace SpectralPathTracer
 
         public static readonly int AovID = Shader.PropertyToID("_Aov");
         public static readonly int DepthRangeID = Shader.PropertyToID("_DepthRange");
+        public static readonly int NoiseDimensionID = Shader.PropertyToID("_NoiseDimension");
+
+        public static readonly int SampleIndexID = Shader.PropertyToID("_SampleIndex");
+        public static readonly int OutputScaleID = Shader.PropertyToID("_OutputScale");
     }
 }

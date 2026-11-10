@@ -13,5 +13,6 @@ MonoBehaviour:
   m_Name: AovSettings
   m_EditorClassIdentifier: SpectralPathTracer::SpectralPathTracer.AovSettings
   <Aov>k__BackingField: 0
-  <DepthNear>k__BackingField: 3
-  <DepthFar>k__BackingField: 5
+  <DepthNear>k__BackingField: 0.8
+  <DepthFar>k__BackingField: 1.4
+  <NoiseDimension>k__BackingField: 0

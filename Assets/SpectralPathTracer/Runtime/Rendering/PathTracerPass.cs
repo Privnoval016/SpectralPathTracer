@@ -23,6 +23,8 @@ namespace SpectralPathTracer
 
         private RTHandle _output;
 
+        private uint _sampleIndex;
+
         private bool _reportedMultipleSkies;
 
         #endregion
@@ -67,14 +69,17 @@ namespace SpectralPathTracer
             UniversalResourceData resourceData = frameData.Get<UniversalResourceData>();
             TextureDesc cameraDesc = renderGraph.GetTextureDesc(resourceData.activeColorTexture);
             var depthRange = new Vector2(_aovSettings.DepthNear, _aovSettings.DepthFar);
-            var frame = new FrameContext(_settings.RenderResolution, PinholeCamera.From(cameraData.camera, _settings), skyColors, _aovSettings.Aov, depthRange);
+            var frame = new FrameContext(_settings.RenderResolution, _settings.OutputResolution, _sampleIndex, PinholeCamera.From(cameraData.camera, _settings), skyColors, _aovSettings.Aov, depthRange, _aovSettings.NoiseDimension);
 
             TextureHandle output = ImportOutput(renderGraph, cameraDesc, frame.RenderSize);
 
             _sceneCompiler.Update();
 
             if (!_settings.Paused)
+            {
                 RecordWavefront(renderGraph, frame, output);
+                _sampleIndex++;
+            }
 
             _presentStage.Record(renderGraph, output, resourceData.activeColorTexture, cameraDesc, _settings.OutputResolution);
         }

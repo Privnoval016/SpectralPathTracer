@@ -26,6 +26,10 @@ namespace SpectralPathTracer
             public PinholeCamera Camera;
             public Aov Aov;
             public Vector2 DepthRange;
+            public int NoiseDimension;
+
+            public uint SampleIndex;
+            public Vector2 OutputScale;
 
             public BufferHandle Objects;
             public BufferHandle Materials;
@@ -62,6 +66,10 @@ namespace SpectralPathTracer
             passData.Camera = frame.Camera;
             passData.Aov = frame.Aov;
             passData.DepthRange = frame.DepthRange;
+            passData.NoiseDimension = frame.NoiseDimension;
+
+            passData.SampleIndex = frame.SampleIndex;
+            passData.OutputScale = frame.OutputScale;
 
             passData.Objects = scene.Objects;
             passData.Materials = scene.Materials;
@@ -86,6 +94,8 @@ namespace SpectralPathTracer
                 SetCamera(cmd, data.Shader, data.Camera);
                 cmd.SetComputeIntParam(data.Shader, ShaderIDs.AovID, (int)data.Aov);
                 cmd.SetComputeVectorParam(data.Shader, ShaderIDs.DepthRangeID, data.DepthRange);
+                cmd.SetComputeIntParam(data.Shader, ShaderIDs.NoiseDimensionID, data.NoiseDimension);
+                SetSampler(cmd, data.Shader, data.SampleIndex, data.OutputScale);
                 cmd.SetComputeBufferParam(data.Shader, data.Kernel, ShaderIDs.ObjectsID, data.Objects);
                 cmd.SetComputeBufferParam(data.Shader, data.Kernel, ShaderIDs.MaterialsID, data.Materials);
                 cmd.DispatchCompute(data.Shader, data.Kernel, data.Groups, 1, 1);

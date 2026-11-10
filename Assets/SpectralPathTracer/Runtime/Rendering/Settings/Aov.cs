@@ -13,6 +13,7 @@ namespace SpectralPathTracer
         None = 0,
         Normals = 1,
         Depth = 2,
-        FrontFace = 3
+        FrontFace = 3,
+        Noise = 4,
     }
 }

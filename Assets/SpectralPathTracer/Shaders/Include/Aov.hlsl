@@ -3,10 +3,12 @@
 
 #include "Camera.hlsl"
 #include "Rays.hlsl"
+#include "Sampler.hlsl"
 #include "../../Runtime/Rendering/Settings/Aov.cs.hlsl"
 
 uint _Aov;
 float2 _DepthRange;
+uint _NoiseDimension;
 
 /**
  * <summary>
@@ -22,7 +24,11 @@ float3 AovColor(GpuRay ray, GpuHit hit, float3 normal, bool frontFace)
 {
     float3 color = float3(0.0f, 0.0f, 0.0f);
 
-    if (hit.Hit != 0u)
+    if (_Aov == AOV_NOISE)
+    {
+        color = SampleUniform(OutputPixel(ray.Pixel), _SampleIndex, _NoiseDimension).xxx;
+    }
+    else if (hit.Hit != 0u)
     {
         if (_Aov == AOV_NORMALS)
             color = normal * 0.5f + 0.5f;

@@ -14,3 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: SpectralPathTracer::SpectralPathTracer.PathTracerSettings
   RenderInEditMode: 1
   RenderInPlayMode: 1
+  editModeScale: 0.5
+  playModeScale: 1
+  <Paused>k__BackingField: 0
+  <OutputResolution>k__BackingField: {x: 1920, y: 1080}

@@ -1,0 +1,21 @@
+#pragma kernel SampleGrid
+
+#include "../../Shaders/Include/Sampler.hlsl"
+
+uint2 _GridSize;
+uint _Dimension;
+RWStructuredBuffer<float> _Samples;
+
+/**
+ * <summary>
+ * Writes one sampler value per grid cell, treating each cell as an output pixel.
+ * </summary>
+ */
+[numthreads(8, 8, 1)]
+void SampleGrid(uint3 id : SV_DispatchThreadID)
+{
+    if (any(id.xy >= _GridSize))
+        return;
+
+    _Samples[id.x + id.y * _GridSize.x] = SampleUniform(id.xy, _SampleIndex, _Dimension);
+}

@@ -54,6 +54,21 @@ namespace SpectralPathTracer
             cmd.SetComputeFloatParam(shader, ShaderIDs.AspectRatioID, camera.AspectRatio);
         }
 
+        /**
+         * <summary>
+         * Sets the sampler uniforms from Sampler.hlsl on a shader.
+         * </summary>
+         * <param name="cmd">The command buffer to record into.</param>
+         * <param name="shader">The shader to set them on.</param>
+         * <param name="sampleIndex">This frame's sample index.</param>
+         * <param name="outputScale">The output resolution divided by the render resolution.</param>
+         */
+        protected static void SetSampler(ComputeCommandBuffer cmd, ComputeShader shader, uint sampleIndex, Vector2 outputScale)
+        {
+            cmd.SetComputeIntParam(shader, ShaderIDs.SampleIndexID, (int)sampleIndex); // the bits arrive unchanged in the uint uniform
+            cmd.SetComputeVectorParam(shader, ShaderIDs.OutputScaleID, outputScale);
+        }
+
         #endregion
     }
 }
