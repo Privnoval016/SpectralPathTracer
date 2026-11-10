@@ -13,6 +13,9 @@ namespace SpectralPathTracer
         [Tooltip("The path tracer settings.")]
         [SerializeField] private PathTracerSettings settings;
 
+        [Tooltip("Which AOV the image shows.")]
+        [SerializeField] private AovSettings aovSettings;
+
         #endregion
 
         #region Private Fields
@@ -38,7 +41,13 @@ namespace SpectralPathTracer
                 return;
             }
 
-            _pass = new PathTracerPass(shaders, settings)
+            if (aovSettings == null)
+            {
+                Debug.LogWarning("PathTracerFeature: No AOV settings assigned.");
+                return;
+            }
+
+            _pass = new PathTracerPass(shaders, settings, aovSettings)
             {
                 renderPassEvent = RenderPassEvent.AfterRenderingPostProcessing
             };

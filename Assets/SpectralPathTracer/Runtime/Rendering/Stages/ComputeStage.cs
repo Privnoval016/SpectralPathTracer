@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Rendering;
 
 namespace SpectralPathTracer
 {
@@ -37,6 +38,18 @@ namespace SpectralPathTracer
          * </summary>
          */
         protected static int GroupCount(int size, int groupSize) => (size + groupSize - 1) / groupSize;
+
+        /**
+         * <summary>
+         * Sets the camera uniforms from Camera.hlsl on a shader.
+         * </summary>
+         */
+        protected static void SetCamera(ComputeCommandBuffer cmd, ComputeShader shader, PinholeCamera camera)
+        {
+            cmd.SetComputeMatrixParam(shader, ShaderIDs.CameraToWorldID, camera.CameraToWorld);
+            cmd.SetComputeFloatParam(shader, ShaderIDs.TanHalfFovYID, camera.TanHalfFov);
+            cmd.SetComputeFloatParam(shader, ShaderIDs.AspectRatioID, camera.AspectRatio);
+        }
 
         #endregion
     }

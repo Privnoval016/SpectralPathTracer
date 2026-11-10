@@ -60,9 +60,7 @@ namespace SpectralPathTracer
                 var cmd = context.cmd;
                 cmd.SetComputeBufferParam(data.Shader, data.Kernel, ShaderIDs.RaysID, data.Rays);
                 cmd.SetComputeIntParams(data.Shader, ShaderIDs.ResolutionID, data.Resolution);
-                cmd.SetComputeMatrixParam(data.Shader, ShaderIDs.CameraToWorldID, data.Camera.CameraToWorld);
-                cmd.SetComputeFloatParam(data.Shader, ShaderIDs.TanHalfFovYID, data.Camera.TanHalfFov);
-                cmd.SetComputeFloatParam(data.Shader, ShaderIDs.AspectRatioID, data.Camera.AspectRatio);
+                SetCamera(cmd, data.Shader, data.Camera);
                 cmd.DispatchCompute(data.Shader, data.Kernel, data.GroupsX, data.GroupsY, 1);
             });
 

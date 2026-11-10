@@ -29,4 +29,15 @@ float3 CameraRayDirection(float2 ndc)
     return normalize(mul(_CameraToWorld, float4(local, 0.0f)).xyz);
 }
 
+/**
+ * <summary>
+ * Computes the camera's forward direction in world space.
+ * </summary>
+ * <returns>The normalized direction the camera looks along.</returns>
+ */
+float3 CameraForward()
+{
+    return normalize(mul(_CameraToWorld, float4(0.0f, 0.0f, 1.0f, 0.0f)).xyz);
+}
+
 #endif

@@ -73,4 +73,17 @@ bool IntersectQuadric(float4x4 q, float3 origin, float3 direction, float tMin, o
     return hit;
 }
 
+/**
+ * <summary>
+ * Computes the surface normal of a quadric at a point on it, from the gradient 2Qx.
+ * </summary>
+ * <param name="q">The 4x4 matrix representing the quadric surface.</param>
+ * <param name="position">A point on the surface in world space.</param>
+ * <returns>The normalized normal, pointing toward where x^T Q x is positive.</returns>
+ */
+float3 QuadricNormal(float4x4 q, float3 position)
+{
+    return normalize(mul(q, float4(position, 1.0f)).xyz);
+}
+
 #endif

@@ -1,0 +1,41 @@
+#ifndef SPT_AOV_INCLUDED
+#define SPT_AOV_INCLUDED
+
+#include "Camera.hlsl"
+#include "Rays.hlsl"
+#include "../../Runtime/Rendering/Aov.cs.hlsl"
+
+uint _Aov;
+float2 _DepthRange;
+
+/**
+ * <summary>
+ * Computes the color the selected AOV shows for one ray, and black where nothing was hit.
+ * </summary>
+ * <param name="ray">The ray, for its direction.</param>
+ * <param name="hit">The ray's hit record.</param>
+ * <param name="normal">The surface normal at the hit.</param>
+ * <param name="frontFace">Whether the ray hit the outside of the surface.</param>
+ * <returns>The AOV's color for this ray.</returns>
+ */
+float3 AovColor(GpuRay ray, GpuHit hit, float3 normal, bool frontFace)
+{
+    float3 color = float3(0.0f, 0.0f, 0.0f);
+
+    if (hit.Hit != 0u)
+    {
+        if (_Aov == AOV_NORMALS)
+            color = normal * 0.5f + 0.5f;
+        else if (_Aov == AOV_DEPTH)
+        {
+            float depth = hit.T * dot(ray.Direction, CameraForward()); // planar depth along the camera's view axis
+            color = saturate((depth - _DepthRange.x) / (_DepthRange.y - _DepthRange.x)).xxx;
+        }
+        else if (_Aov == AOV_FRONT_FACE)
+            color = frontFace ? float3(0.0f, 1.0f, 0.0f) : float3(1.0f, 0.0f, 0.0f);
+    }
+
+    return color;
+}
+
+#endif

@@ -12,6 +12,7 @@ namespace SpectralPathTracer
         #region Private Fields
 
         private readonly PathTracerSettings _settings;
+        private readonly AovSettings _aovSettings;
 
         private readonly GenerateStage _generateStage;
         private readonly IntersectStage _intersectStage;
@@ -30,10 +31,12 @@ namespace SpectralPathTracer
          * </summary>
          * <param name="shaders">The compute shaders for each wavefront stage.</param>
          * <param name="settings">The path tracer settings.</param>
+         * <param name="aovSettings">Which AOV to show, and how.</param>
          */
-        public PathTracerPass(PathTracerShaders shaders, PathTracerSettings settings)
+        public PathTracerPass(PathTracerShaders shaders, PathTracerSettings settings, AovSettings aovSettings)
         {
             _settings = settings;
+            _aovSettings = aovSettings;
 
             _generateStage = new GenerateStage(shaders.Generate);
             _intersectStage = new IntersectStage(shaders.Intersect);
@@ -59,7 +62,8 @@ namespace SpectralPathTracer
 
             UniversalResourceData resourceData = frameData.Get<UniversalResourceData>();
             TextureDesc cameraDesc = renderGraph.GetTextureDesc(resourceData.activeColorTexture);
-            var frame = new FrameContext(_settings.RenderResolution, PinholeCamera.From(cameraData.camera, _settings), skyColors);
+            var depthRange = new Vector2(_aovSettings.DepthNear, _aovSettings.DepthFar);
+            var frame = new FrameContext(_settings.RenderResolution, PinholeCamera.From(cameraData.camera, _settings), skyColors, _aovSettings.Aov, depthRange);
 
             TextureHandle output = ImportOutput(renderGraph, cameraDesc, frame.RenderSize);
 

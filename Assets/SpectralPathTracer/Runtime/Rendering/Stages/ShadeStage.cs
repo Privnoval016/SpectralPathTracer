@@ -23,6 +23,9 @@ namespace SpectralPathTracer
             public int Groups;
 
             public SkyColors Sky;
+            public PinholeCamera Camera;
+            public Aov Aov;
+            public Vector2 DepthRange;
         }
 
         public ShadeStage(ComputeShader shader) : base(shader, KernelName)
@@ -50,6 +53,9 @@ namespace SpectralPathTracer
             passData.Groups = GroupCount(frame.RayCount, GroupSizeX);
 
             passData.Sky = frame.Sky;
+            passData.Camera = frame.Camera;
+            passData.Aov = frame.Aov;
+            passData.DepthRange = frame.DepthRange;
 
             builder.UseBuffer(rays, AccessFlags.Read);
             builder.UseBuffer(hits, AccessFlags.Read);
@@ -66,6 +72,9 @@ namespace SpectralPathTracer
                 cmd.SetComputeVectorParam(data.Shader, ShaderIDs.SkyZenithID, data.Sky.Zenith.linear);
                 cmd.SetComputeVectorParam(data.Shader, ShaderIDs.SkyHorizonID, data.Sky.Horizon.linear);
                 cmd.SetComputeVectorParam(data.Shader, ShaderIDs.SkyGroundID, data.Sky.Ground.linear);
+                SetCamera(cmd, data.Shader, data.Camera);
+                cmd.SetComputeIntParam(data.Shader, ShaderIDs.AovID, (int)data.Aov);
+                cmd.SetComputeVectorParam(data.Shader, ShaderIDs.DepthRangeID, data.DepthRange);
                 cmd.DispatchCompute(data.Shader, data.Kernel, data.Groups, 1, 1);
             });
         }

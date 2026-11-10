@@ -2,6 +2,8 @@
 
 #include "../Include/Sky.hlsl"
 #include "../Include/Rays.hlsl"
+#include "../Include/TestScene.hlsl"
+#include "../Include/Aov.hlsl"
 
 uint _RayCount;
 StructuredBuffer<GpuRay> _Rays;
@@ -22,6 +24,16 @@ void Shade(uint3 id : SV_DispatchThreadID)
     GpuRay ray = LoadRay(_Rays, id.x);
     GpuHit hit = LoadHit(_Hits, id.x);
 
-    float3 color = hit.Hit != 0u ? float3(1.0f, 1.0f, 1.0f) : SkyRadiance(ray.Direction);
+    // rebuild the hit from the ray instead of storing it
+    float3 position = ray.Origin + hit.T * ray.Direction;
+    float3 normal = QuadricNormal(TestSphereQuadric(), position);
+    bool frontFace = dot(normal, ray.Direction) < 0.0f;
+
+    float3 color;
+    if (_Aov != AOV_NONE)
+        color = AovColor(ray, hit, normal, frontFace);
+    else
+        color = hit.Hit != 0u ? float3(1.0f, 1.0f, 1.0f) : SkyRadiance(ray.Direction);
+
     _Output[ray.Pixel] = float4(color, 1.0f);
 }

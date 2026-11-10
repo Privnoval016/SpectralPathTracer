@@ -18,5 +18,8 @@ namespace SpectralPathTracer
         public static readonly int SkyZenithID = Shader.PropertyToID("_SkyZenithColor");
         public static readonly int SkyHorizonID = Shader.PropertyToID("_SkyHorizonColor");
         public static readonly int SkyGroundID = Shader.PropertyToID("_SkyGroundColor");
+
+        public static readonly int AovID = Shader.PropertyToID("_Aov");
+        public static readonly int DepthRangeID = Shader.PropertyToID("_DepthRange");
     }
 }

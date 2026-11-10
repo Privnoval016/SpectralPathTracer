@@ -15,14 +15,18 @@ namespace SpectralPathTracer
         public int RayCount => RenderSize.x * RenderSize.y;
         public PinholeCamera Camera { get; }
         public SkyColors Sky { get; }
+        public Aov Aov { get; }
+        public Vector2 DepthRange { get; }
 
         #endregion
 
-        public FrameContext(Vector2Int renderSize, PinholeCamera camera, SkyColors sky)
+        public FrameContext(Vector2Int renderSize, PinholeCamera camera, SkyColors sky, Aov aov, Vector2 depthRange)
         {
             RenderSize = renderSize;
             Camera = camera;
             Sky = sky;
+            Aov = aov;
+            DepthRange = depthRange;
         }
     }
 }

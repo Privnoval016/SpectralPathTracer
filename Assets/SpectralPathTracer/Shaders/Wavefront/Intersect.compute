@@ -2,10 +2,7 @@
 
 #include "../Include/Quadric.hlsl"
 #include "../Include/Rays.hlsl"
-
-// temporary test sphere
-static const float3 SPHERE_CENTER = float3(0.0f, 1.0f, 0.0f);
-static const float SPHERE_RADIUS = 1.0f;
+#include "../Include/TestScene.hlsl"
 
 uint _RayCount;
 StructuredBuffer<GpuRay> _Rays;
@@ -25,7 +22,7 @@ void Intersect(uint3 id : SV_DispatchThreadID)
     GpuRay ray = LoadRay(_Rays, id.x);
 
     GpuHit hit;
-    float4x4 sphereQuadric = SphereQuadric(SPHERE_CENTER, SPHERE_RADIUS);
+    float4x4 sphereQuadric = TestSphereQuadric();
     hit.Hit = IntersectQuadric(sphereQuadric, ray.Origin, ray.Direction, 0.0f, hit.T) ? 1u : 0u;
 
     StoreHit(_Hits, id.x, hit);
