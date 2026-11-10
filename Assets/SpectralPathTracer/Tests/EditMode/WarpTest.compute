@@ -1,0 +1,25 @@
+#pragma kernel SampleDirections
+
+#include "../../Shaders/Include/Sampler.hlsl"
+#include "../../Shaders/Include/Sampling.hlsl"
+
+uint2 _GridSize;
+uint _Warp;
+float3 _Normal;
+RWStructuredBuffer<float3> _Directions;
+
+/**
+ * <summary>
+ * Writes one warped direction around _Normal per grid cell: cosine-weighted when _Warp is 0, uniform when it is 1.
+ * </summary>
+ */
+[numthreads(8, 8, 1)]
+void SampleDirections(uint3 id : SV_DispatchThreadID)
+{
+    if (any(id.xy >= _GridSize))
+        return;
+
+    float2 u = float2(SampleUniform(id.xy, 0u, 0u), SampleUniform(id.xy, 0u, 1u));
+    float3 local = _Warp == 0u ? SampleCosineHemisphere(u) : SampleUniformHemisphere(u);
+    _Directions[id.x + id.y * _GridSize.x] = LocalToWorld(local, _Normal);
+}

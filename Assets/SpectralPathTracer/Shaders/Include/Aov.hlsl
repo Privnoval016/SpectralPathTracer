@@ -4,6 +4,7 @@
 #include "Camera.hlsl"
 #include "Rays.hlsl"
 #include "Sampler.hlsl"
+#include "Sampling.hlsl"
 #include "../../Runtime/Rendering/Settings/Aov.cs.hlsl"
 
 uint _Aov;
@@ -39,6 +40,14 @@ float3 AovColor(GpuRay ray, GpuHit hit, float3 normal, bool frontFace)
         }
         else if (_Aov == AOV_FRONT_FACE)
             color = frontFace ? float3(0.0f, 1.0f, 0.0f) : float3(1.0f, 0.0f, 0.0f);
+        else if (_Aov == AOV_BOUNCE_DIRECTION)
+        {
+            uint2 pixel = OutputPixel(ray.Pixel);
+            float2 u = float2(SampleUniform(pixel, _SampleIndex, BounceDimension(0u, SLOT_BSDF_U)),
+                              SampleUniform(pixel, _SampleIndex, BounceDimension(0u, SLOT_BSDF_V)));
+            float3 facing = frontFace ? normal : -normal;
+            color = LocalToWorld(SampleCosineHemisphere(u), facing) * 0.5f + 0.5f;
+        }
     }
 
     return color;

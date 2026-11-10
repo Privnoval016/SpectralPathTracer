@@ -15,5 +15,6 @@ namespace SpectralPathTracer
         Depth = 2,
         FrontFace = 3,
         Noise = 4,
+        BounceDirection = 5,
     }
 }

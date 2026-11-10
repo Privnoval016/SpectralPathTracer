@@ -12,6 +12,7 @@
 #define AOV_DEPTH (2)
 #define AOV_FRONT_FACE (3)
 #define AOV_NOISE (4)
+#define AOV_BOUNCE_DIRECTION (5)
 
 
 #endif

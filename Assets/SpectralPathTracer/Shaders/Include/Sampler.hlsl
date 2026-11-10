@@ -8,6 +8,16 @@ float2 _OutputScale;
 static const uint DIMENSION_PIXEL_JITTER_X = 0u;
 static const uint DIMENSION_PIXEL_JITTER_Y = 1u;
 
+static const uint DIMENSION_BOUNCE_BASE = 2u; // each bounce uses 2 dimensions (u, v)
+static const uint DIMENSIONS_PER_BOUNCE = 16u;
+static const uint SLOT_BSDF_U = 0u;
+static const uint SLOT_BSDF_V = 1u;
+
+uint BounceDimension(uint depth, uint slot)
+{
+    return DIMENSION_BOUNCE_BASE + depth * DIMENSIONS_PER_BOUNCE + slot;
+}
+
 /**
  * https://jcgt.org/published/0009/03/02/paper.pdf funny hash function thats pretty good apparently
  */
