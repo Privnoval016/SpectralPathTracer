@@ -48,7 +48,7 @@ float UintToUnitFloat(uint bits)
  */
 float SampleUniform(uint2 outputPixel, uint sampleIndex, uint dimension)
 {
-    return UintToUnitFloat(Pcg4d(uint4(outputPixel, sampleIndex, dimension)).x); // specifically picking x to stay injective
+    return UintToUnitFloat(Pcg4d(uint4(outputPixel, sampleIndex, dimension)).x); // arbitrarily picking x here instead of the other components
 }
 
 #endif
