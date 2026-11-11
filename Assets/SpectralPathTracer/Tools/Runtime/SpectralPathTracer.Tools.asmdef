@@ -1,0 +1,8 @@
+{
+    "name": "SpectralPathTracer.Tools",
+    "rootNamespace": "SpectralPathTracer",
+    "references": [
+        "Unity.InputSystem"
+    ],
+    "autoReferenced": true
+}
