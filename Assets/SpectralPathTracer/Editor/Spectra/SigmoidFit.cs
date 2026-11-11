@@ -64,7 +64,7 @@ namespace SpectralPathTracer
                     damped.m11 += damping;
                     damped.m22 += damping;
 
-                    Vector3 step = damped.inverse.MultiplyVector(gradient); // a singular matrix inverts to zero, which then fails below
+                    Vector3 step = damped.inverse.MultiplyVector(gradient); // a singular matrix inverts to zero which then fails below
                     Vector3 trial = coefficients - step;
                     float trialCost = Cost(trial, target, out Vector3 trialResidual, out Matrix4x4 trialJacobian);
 
@@ -110,6 +110,18 @@ namespace SpectralPathTracer
 
 
             return new Vector3(a, b, c);
+        }
+
+        /**
+         * <summary>
+         * Converts a linear sRGB color to CIELAB relative to D65.
+         * </summary>
+         * <param name="rgb">The linear sRGB color.</param>
+         * <returns>The color in CIELAB.</returns>
+         */
+        public static Vector3 SrgbToLab(Vector3 rgb)
+        {
+            return Lab(Cie.LinearSrgbToXyz(rgb), out _);
         }
 
         #region Helpers

@@ -8,6 +8,7 @@ namespace SpectralPathTracer
     public static class SpectrumCheck
     {
         private const int MonteCarloSamples = 65536;
+        private const int TableSamples = 1000; // random colors sent through the sigmoid table
 
         [MenuItem("Tools/Spectral Path Tracer/Spectrum Check")]
         public static void Run()
@@ -40,6 +41,47 @@ namespace SpectralPathTracer
             ReportFit("pure red", Vector3.right);
             ReportFit("pure green", Vector3.up);
             ReportFit("pure blue", Vector3.forward);
+
+
+            ReportTable();
+        }
+
+        /**
+         * <summary>
+         * Sends random colors through the sigmoid table and measures how far each comes back.
+         * </summary>
+         */
+        private static void ReportTable()
+        {
+            var asset = AssetDatabase.LoadAssetAtPath<TextAsset>(SigmoidTableBuilder.OutputPath);
+            if (asset == null)
+            {
+                Debug.LogError("Spectrum FAIL: no sigmoid table yet, run Tools > Spectral Path Tracer > Build Sigmoid Table");
+                return;
+            }
+
+            SigmoidTable table = SigmoidTable.Read(asset.bytes);
+            float whiteY = Integrate(Cie.D65At).y;
+            var random = new System.Random(2); // seeded, so the same colors every run
+
+            float worst = 0f, total = 0f;
+            for (int n = 0; n < TableSamples; n++)
+            {
+                var rgb = new Vector3((float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble());
+                Vector3 coefficients = table.Lookup(rgb);
+
+                // light the looked-up spectrum with D65 and see which color comes back
+                Vector3 xyz = Integrate(lambda => SigmoidSpectrum.Evaluate(coefficients, lambda) * Cie.D65At(lambda));
+                Vector3 rebuilt = Cie.XyzToLinearSrgb(xyz / whiteY);
+
+                float deltaE = (SigmoidFit.SrgbToLab(rebuilt) - SigmoidFit.SrgbToLab(rgb)).magnitude;
+                worst = Mathf.Max(worst, deltaE);
+                total += deltaE;
+            }
+
+
+            Report("table worst delta E", worst, 0f, 1f); // below 1 is invisible side by side
+            Debug.Log($"Spectrum note: table mean delta E {total / TableSamples:F4} over {TableSamples} random colors");
         }
 
         /**
