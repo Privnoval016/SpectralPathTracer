@@ -6,7 +6,7 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
-    path: Assets/SpectralPathTracer/Scenes/Canvas.unity
+    path: Assets/SpectralPathTracer/Scenes/CornellBox.unity
     guid: aca641d2c755f4a6c99dab444d89a8bf
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
