@@ -69,4 +69,19 @@ float SampleUniform(uint2 outputPixel, uint sampleIndex, uint dimension)
     return UintToUnitFloat(Pcg4d(uint4(outputPixel, sampleIndex, dimension)).x); // arbitrarily picking x here instead of the other components
 }
 
+
+/**
+ * <summary>
+ * Draws the two numbers that choose a bounce's direction.
+ * </summary>
+ * <param name="outputPixel">The pixel coordinates in the output buffer.</param>
+ * <param name="depth">The bounce depth.</param>
+ * <returns>A 2D uniform random sample in the range [0, 1).</returns>
+ */
+float2 SampleBsdf2D(uint2 outputPixel, uint depth)
+{
+    return float2(SampleUniform(outputPixel, _SampleIndex, BounceDimension(depth, SLOT_BSDF_U)),
+                  SampleUniform(outputPixel, _SampleIndex, BounceDimension(depth, SLOT_BSDF_V)));
+}
+
 #endif

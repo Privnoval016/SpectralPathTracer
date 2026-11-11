@@ -7,7 +7,7 @@
 #pragma kernel Intersect
 
 #include "../Include/Paths/Rays.hlsl"
-#include "../Include/SceneData.hlsl"
+#include "../Include/Trace.hlsl"
 
 uint _QueueInOffset;
 StructuredBuffer<GpuRay> _Rays;
@@ -29,25 +29,5 @@ void Intersect(uint3 id : SV_DispatchThreadID)
 
     uint slot = _QueueIn[id.x];
     GpuRay ray = LoadRay(_Rays, slot);
-
-    GpuHit hit;
-    hit.T = 0.0f;
-    hit.Hit = 0u;
-    hit.ObjectIndex = -1;
-
-    // keep the nearest hit across every object; with no objects the loop never runs and the ray misses
-    for (uint i = 0; i < _ObjectCount; i++)
-    {
-        float t;
-        bool hitObject = IntersectObject(LoadObject(_Objects, i), ray.Origin, ray.Direction, 0.0f, t);
-
-        if (hitObject && (hit.Hit == 0u || t < hit.T))
-        {
-            hit.T = t;
-            hit.Hit = 1u;
-            hit.ObjectIndex = (int)i;
-        }
-    }
-
-    StoreHit(_Hits, slot, hit);
+    StoreHit(_Hits, slot, ClosestHit(ray));
 }

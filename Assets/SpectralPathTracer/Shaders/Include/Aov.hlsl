@@ -44,9 +44,7 @@ float3 AovColor(GpuRay ray, GpuHit hit, float3 normal, bool frontFace)
             color = frontFace ? float3(0.0f, 1.0f, 0.0f) : float3(1.0f, 0.0f, 0.0f);
         else if (_Aov == AOV_BOUNCE_DIRECTION)
         {
-            uint2 pixel = OutputPixel(ray.Pixel);
-            float2 u = float2(SampleUniform(pixel, _SampleIndex, BounceDimension(0u, SLOT_BSDF_U)),
-                              SampleUniform(pixel, _SampleIndex, BounceDimension(0u, SLOT_BSDF_V)));
+            float2 u = SampleBsdf2D(OutputPixel(ray.Pixel), 0u);
             float3 facing = frontFace ? normal : -normal;
             color = LocalToWorld(SampleCosineHemisphere(u), facing) * 0.5f + 0.5f;
         }

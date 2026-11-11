@@ -10,11 +10,13 @@
 #include "../Include/Sky.hlsl"
 #include "../Include/Paths/Rays.hlsl"
 #include "../Include/Paths/PathState.hlsl"
-#include "../Include/SceneData.hlsl"
+#include "../Include/Lanes.hlsl"
+#include "../Include/Trace.hlsl"
 #include "../Include/Aov.hlsl"
+#include "../Include/Materials/Bsdf.hlsl"
 #include "../Include/Paths/RayOffset.hlsl"
+#include "../Include/Paths/RussianRoulette.hlsl"
 #include "../Include/Sampling/Sampler.hlsl"
-#include "../Include/Sampling/Sampling.hlsl"
 
 uint _Depth;
 RWStructuredBuffer<GpuRay> _Rays;
@@ -47,59 +49,37 @@ void Shade(uint3 id : SV_DispatchThreadID)
     GpuHit hit = LoadHit(_Hits, slot);
 
     // rebuild the hit from the ray instead of storing it
-    float3 position = float3(0.0f, 0.0f, 0.0f);
-    float3 normal = float3(0.0f, 0.0f, 0.0f);
-    bool frontFace = true;
-    GpuMaterial material = (GpuMaterial)0;
-
-    if (hit.Hit != 0u)
-    {
-        GpuObject hitObject = LoadObject(_Objects, hit.ObjectIndex);
-        position = ray.Origin + hit.T * ray.Direction;
-        normal = ObjectNormal(hitObject, position);
-        frontFace = dot(normal, ray.Direction) < 0.0f;
-        material = LoadMaterial(_Materials, hitObject.MaterialIndex);
-    }
+    SurfaceHit surface = BuildSurfaceHit(ray, hit);
 
     if (_Depth == 0u && _Aov != AOV_NONE)
     {
-        path.Radiance.rgb = AovColor(ray, hit, normal, frontFace);
+        path.Radiance.rgb = AovColor(ray, hit, surface.Normal, surface.FrontFace);
         Finish(path);
     }
     else if (hit.Hit == 0u)
     {
-        path.Radiance.rgb += path.Throughput.rgb * SkyRadiance(ray.Direction); // the sky is a light too
+        path.Radiance += path.Throughput * RgbToLanes(SkyRadiance(ray.Direction)); // the sky is a light too
         Finish(path);
     }
     else
     {
-        if (frontFace)
-            path.Radiance.rgb += path.Throughput.rgb * material.Emission; // lights emit from their front only
+        if (surface.FrontFace)
+            path.Radiance += path.Throughput * RgbToLanes(surface.Material.Emission); // lights emit from their front only
 
         if (_Depth < _MaxBounces)
         {
-            float3 facing = frontFace ? normal : -normal;
             uint2 pixel = OutputPixel(ray.Pixel);
-            float2 u = float2(SampleUniform(pixel, _SampleIndex, BounceDimension(_Depth, SLOT_BSDF_U)),
-                              SampleUniform(pixel, _SampleIndex, BounceDimension(_Depth, SLOT_BSDF_V)));
+            BsdfSample bsdf = SampleBsdf(surface.Material, surface.Facing, SampleBsdf2D(pixel, _Depth));
+            path.Throughput *= bsdf.Weight;
 
-            path.Throughput.rgb *= material.Albedo; // f cos / pdf for a Lambertian surface is the albedo
-
-            bool continues = any(path.Throughput.rgb > 0.0f);
-
-
-            float largestLane = max(path.Throughput.r, max(path.Throughput.g, path.Throughput.b));
-            
-            if (continues && _RussianRoulette != 0u && _Depth >= 1u && largestLane < 1.0f)
-            {
-                continues = SampleUniform(pixel, _SampleIndex, BounceDimension(_Depth, SLOT_RUSSIAN_ROULETTE)) < largestLane;
-                path.Throughput.rgb /= largestLane; // throughput scaling to be unbiased
-            }
+            bool continues = any(path.Throughput > 0.0f);
+            if (continues && _RussianRoulette != 0u && _Depth >= 1u)
+                continues = SurvivesRoulette(path.Throughput, SampleUniform(pixel, _SampleIndex, BounceDimension(_Depth, SLOT_RUSSIAN_ROULETTE)));
 
             if (continues)
             {
-                ray.Origin = OffsetRayOrigin(position, facing);
-                ray.Direction = LocalToWorld(SampleCosineHemisphere(u), facing);
+                ray.Origin = OffsetRayOrigin(surface.Position, surface.Facing);
+                ray.Direction = bsdf.Direction;
                 StoreRay(_Rays, slot, ray);
 
                 // each thread gets its own slot, so the queue stays packed

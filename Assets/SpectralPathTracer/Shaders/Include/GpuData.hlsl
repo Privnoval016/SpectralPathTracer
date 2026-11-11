@@ -1,6 +1,6 @@
 /**
  * <summary>
- * Every struct, enum and constant buffer generated from C#, so only this file reaches into Runtime.
+ * Every struct, enum and constant buffer generated from C#.
  * </summary>
  */
 
