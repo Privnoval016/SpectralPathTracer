@@ -43,6 +43,10 @@ namespace SpectralPathTracer
         [field: Min(0)]
         [field: SerializeField] public int TargetSamples { get; private set; } = 1024;
 
+        [field: Tooltip("GPU time to aim for per frame in milliseconds; 0 runs one full sample every frame.")]
+        [field: Min(0f)]
+        [field: SerializeField] public float FrameBudgetMs { get; private set; } = 33f;
+
         [field: Header("Display")]
 
         [field: Tooltip("Brightness in stops, where each +1 doubles it, 0 leaves the radiance unchanged.")]

@@ -24,6 +24,7 @@ namespace SpectralPathTracer
             EditorGUILayout.Space();
             string target = AccumulationProgress.TargetSamples == 0 ? "no limit" : AccumulationProgress.TargetSamples.ToString();
             EditorGUILayout.LabelField("Samples", $"{AccumulationProgress.Samples} / {target}");
+            EditorGUILayout.LabelField("Frame", $"{RenderStats.FrameMs:F1} ms, {RenderStats.WavesPerFrame} waves");
 
             _showLivePaths = EditorGUILayout.Foldout(_showLivePaths, "Live paths per depth", true);
             if (_showLivePaths)

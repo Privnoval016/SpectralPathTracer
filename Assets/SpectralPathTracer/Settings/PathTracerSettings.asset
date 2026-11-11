@@ -22,5 +22,6 @@ MonoBehaviour:
   <RussianRoulette>k__BackingField: 1
   <PixelJitter>k__BackingField: 1
   <TargetSamples>k__BackingField: 1024
+  <FrameBudgetMs>k__BackingField: 33
   <Exposure>k__BackingField: 0.4
   <ShowGrayRamp>k__BackingField: 0

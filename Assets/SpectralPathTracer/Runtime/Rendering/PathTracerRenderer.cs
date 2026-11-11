@@ -29,6 +29,7 @@ namespace SpectralPathTracer
         private readonly AccumulationBuffer _accumulation = new AccumulationBuffer();
         private readonly FrameConstantsBuffer _constants = new FrameConstantsBuffer();
         private readonly LivePathStats _liveStats = new LivePathStats();
+        private readonly WaveScheduler _scheduler = new WaveScheduler();
 
         private RenderParams _params;
         private uint _sampleCount;
@@ -89,8 +90,9 @@ namespace SpectralPathTracer
                 BufferHandle livePaths = _liveStats.RecordClear(renderGraph);
                 RecordWavefront(renderGraph, frame, accumulation, livePaths);
                 _liveStats.RecordReadback(renderGraph, livePaths);
-                _sampleCount++;
             }
+            else
+                _scheduler.Idle();
 
             AccumulationProgress.Report((int)_sampleCount, _settings.TargetSamples, accumulating);
 
@@ -151,6 +153,7 @@ namespace SpectralPathTracer
             if (resized || sceneChanged || !renderParams.Equals(_params))
             {
                 _sampleCount = 0;
+                _scheduler.Restart();
                 _params = renderParams;
             }
         }
@@ -191,7 +194,7 @@ namespace SpectralPathTracer
 
         /**
          * <summary>
-         * Records every wave: generate camera rays, intersect and shade once per bounce, then resolve into the sums.
+         * Records as many waves as fit in the frame budget, continuing from the scheduler's cursor.
          * </summary>
          * <param name="renderGraph">The render graph recording this frame.</param>
          * <param name="frame">This frame's context.</param>
@@ -202,24 +205,51 @@ namespace SpectralPathTracer
         {
             SceneBuffers scene = _sceneCompiler.Import(renderGraph);
 
-            for (int waveStart = 0; waveStart < frame.PixelCount; waveStart += WaveSize)
+            int wavesPerSample = (frame.PixelCount + WaveSize - 1) / WaveSize;
+            int waves = _scheduler.Plan(_settings.FrameBudgetMs, wavesPerSample);
+            RenderStats.ReportFrame(_scheduler.MsPerWave * waves, waves);
+
+            for (int i = 0; i < waves; i++)
             {
-                int waveCount = Mathf.Min(WaveSize, frame.PixelCount - waveStart);
-                PathBuffers paths = _generateStage.Record(renderGraph, frame, waveStart, waveCount, _sampleCount);
+                // a new sample only starts below the target
+                if (_scheduler.Cursor == 0 && _settings.TargetSamples != 0 && _sampleCount >= _settings.TargetSamples)
+                    break;
 
-                // depth 0 is the camera ray's hit, so N bounces take N + 1 passes
-                for (int depth = 0; depth <= frame.MaxBounces; depth++)
-                {
-                    _intersectStage.Record(renderGraph, frame, paths, scene, depth);
-                    _shadeStage.Record(renderGraph, frame, paths, scene, depth);
+                RecordWave(renderGraph, frame, scene, accumulation, livePaths, _scheduler.Cursor * WaveSize);
 
-                    // only the live paths Shade queued get dispatched next, so after the last bounce nothing needs to read the queue
-                    if (depth < frame.MaxBounces)
-                        _argsStage.Record(renderGraph, paths, depth, livePaths);
-                }
-
-                _resolveStage.Record(renderGraph, frame, paths, accumulation);
+                if (_scheduler.Advance(wavesPerSample))
+                    _sampleCount++;
             }
+        }
+
+        /**
+         * <summary>
+         * Records one wave: generate camera rays, intersect and shade once per bounce, then resolve into the sums.
+         * </summary>
+         * <param name="renderGraph">The render graph recording this frame.</param>
+         * <param name="frame">This frame's context.</param>
+         * <param name="scene">The scene's buffers, imported this frame.</param>
+         * <param name="accumulation">The running sums to add this wave's samples to.</param>
+         * <param name="livePaths">The per-depth live path counts.</param>
+         * <param name="waveStart">The first pixel the wave covers.</param>
+         */
+        private void RecordWave(RenderGraph renderGraph, in FrameContext frame, in SceneBuffers scene, BufferHandle accumulation, BufferHandle livePaths, int waveStart)
+        {
+            int waveCount = Mathf.Min(WaveSize, frame.PixelCount - waveStart);
+            PathBuffers paths = _generateStage.Record(renderGraph, frame, waveStart, waveCount, _sampleCount);
+
+            // depth 0 is the camera ray's hit, so N bounces take N + 1 passes
+            for (int depth = 0; depth <= frame.MaxBounces; depth++)
+            {
+                _intersectStage.Record(renderGraph, frame, paths, scene, depth);
+                _shadeStage.Record(renderGraph, frame, paths, scene, depth);
+
+                // only the live paths Shade queued get dispatched next, so after the last bounce nothing needs to read the queue
+                if (depth < frame.MaxBounces)
+                    _argsStage.Record(renderGraph, paths, depth, livePaths);
+            }
+
+            _resolveStage.Record(renderGraph, frame, paths, accumulation);
         }
 
         #endregion
