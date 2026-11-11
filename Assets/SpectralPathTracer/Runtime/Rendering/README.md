@@ -17,12 +17,12 @@ flowchart TD
     end
 
     subgraph WAVE["GPU, for each planned wave from the cursor, up to 2^18 paths each"]
-        gen["Generate<br/>camera ray and path state per slot,<br/>queue A = every slot"]
+        gen["Generate<br/>camera ray, path state and wavelengths per slot,<br/>queue A = every slot"]
         isect["Intersect<br/>nearest hit for each queued path"]
         shade["Shade<br/>add light, sample the bounce,<br/>Russian roulette from depth 1,<br/>append survivors to the other queue"]
         more{"another bounce?"}
         args["Args<br/>survivor count becomes the next dispatch size<br/>and is added to the live path stats"]
-        resolve["Resolve<br/>add every path's radiance to its pixel's sum"]
+        resolve["Resolve<br/>turn each path's lanes into RGB<br/>and add it to its pixel's sum"]
         gen --> isect --> shade --> more
         more -- yes --> args --> isect
         more -- no --> resolve
@@ -58,7 +58,7 @@ flowchart TD
 - **Indirect dispatch.** The survivor count only exists on the GPU. The one-thread Args kernel turns it into the next
   dispatch size, so the CPU never waits for the GPU between bounces.
 - **Accumulation.** Resolve adds each sample to a per-pixel sum, and Display divides by the pixel's sample count. A
-  change to the scene or to anything in `RenderParams` (camera, sizes, bounces, sky, AOV) restarts the sums; exposure
+  change to the scene or to anything in `RenderParams` (camera, sizes, bounces, sky, AOV, spectral) restarts the sums; exposure
   doesn't, because it applies after averaging.
 - **Time budget.** A wave is the smallest unit of work, because its buffers only live for one frame's graph.
   `WaveScheduler` keeps a cursor into the current sample and runs as many waves as fit in Frame Budget (ms), judged
@@ -70,6 +70,12 @@ flowchart TD
   `PathTracerOverrides` (target samples, frame budget, a restart request), ask `DisplayCapture` for the next
   displayed frame, or ask `AccumulationCapture` for each pixel's mean radiance as floats. Movie mode and the furnace
   check in `Tools/` are built on these.
+- **Spectrum.** A path carries a `SampledSpectrum`, four lanes in a `float4`: (r, g, b, 0) in RGB mode, four
+  wavelengths in spectral mode. Its `SampledWavelengths` are chosen once in Generate and only read afterwards, and the
+  lane bits in its flags mark which lanes still carry light; Resolve divides by their average so terminated lanes are
+  made up for. Generate, Shade and Resolve compile an RGB and a `SPECTRAL` variant, and each pass sets the keyword
+  both ways on its own command buffer. Until the spectral math arrives the conversions pass colors through, so both
+  variants render the same image.
 - **Frame constants.** Values that hold for the whole frame travel in one constant buffer, `FrameConstants`, uploaded
   once and read through `GpuData.hlsl`. Only per-dispatch values like the depth and queue offsets stay as
   separate uniforms.
