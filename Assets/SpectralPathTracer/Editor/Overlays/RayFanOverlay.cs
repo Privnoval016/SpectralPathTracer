@@ -93,7 +93,7 @@ namespace SpectralPathTracer
             if (camera == null || settings.PathTracerSettings == null)
                 return;
 
-            PinholeCamera pinhole = PinholeCamera.From(camera, settings.PathTracerSettings);
+            PinholeCamera pinhole = PinholeCamera.From(camera, settings.PathTracerSettings.OutputAspectRatio);
             DrawRayGrid(pinhole, settings);
 
             if (settings.ShowFrustumEdges)

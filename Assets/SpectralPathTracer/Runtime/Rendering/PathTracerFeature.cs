@@ -55,7 +55,7 @@ namespace SpectralPathTracer
 
         public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData)
         {
-            if (_pass == null || !settings.IsEnabledForCurrentMode)
+            if (_pass == null || !settings.IsEnabledFor(Application.isPlaying))
             {
                 return;
             }

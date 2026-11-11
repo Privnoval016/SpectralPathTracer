@@ -1,4 +1,3 @@
-using Unity.Collections.LowLevel.Unsafe;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.RenderGraphModule;
@@ -28,6 +27,7 @@ namespace SpectralPathTracer
 
         public IntersectStage(ComputeShader shader) : base(shader, KernelName)
         {
+            CheckGroupSize((int)QueueSizes.GroupSize);
         }
 
         /**
@@ -39,28 +39,26 @@ namespace SpectralPathTracer
          * <param name="paths">The wave's rays and queues.</param>
          * <param name="scene">The scene's buffers, imported this frame.</param>
          * <param name="depth">The bounce depth, which picks the queue to read.</param>
-         * <returns>The hit buffer, one entry per path slot, valid for this frame's render graph.</returns>
          */
-        public BufferHandle Record(RenderGraph renderGraph, in FrameContext frame, in PathBuffers paths, in SceneBuffers scene, int depth)
+        public void Record(RenderGraph renderGraph, in FrameContext frame, in PathBuffers paths, in SceneBuffers scene, int depth)
         {
-            var desc = new BufferDesc(paths.Count, UnsafeUtility.SizeOf<GpuHit>(), GraphicsBuffer.Target.Structured) { name = "PathTracerHits" };
-            BufferHandle hits = renderGraph.CreateBuffer(desc);
-
             using var builder = renderGraph.AddComputePass("Path Tracer: Intersect", out PassData passData);
 
             passData.Shader = Shader;
             passData.Kernel = Kernel;
             passData.Rays = paths.Rays;
-            passData.Hits = hits;
-            passData.QueueIn = paths.QueueIn(depth);
+            WorkQueue queueIn = paths.QueueIn(depth);
+
+            passData.Hits = paths.Hits;
+            passData.QueueIn = queueIn.Slots;
             passData.Counters = paths.Counters;
             passData.Args = paths.Args;
-            passData.QueueInOffset = PathBuffers.QueueInOffset(depth);
+            passData.QueueInOffset = queueIn.CountOffset;
             passData.Scene = scene;
 
             builder.UseBuffer(paths.Rays, AccessFlags.Read);
-            builder.UseBuffer(hits, AccessFlags.Write);
-            builder.UseBuffer(paths.QueueIn(depth), AccessFlags.Read);
+            builder.UseBuffer(paths.Hits, AccessFlags.Write);
+            builder.UseBuffer(queueIn.Slots, AccessFlags.Read);
             builder.UseBuffer(paths.Counters, AccessFlags.Read);
             builder.UseBuffer(paths.Args, AccessFlags.Read);
             scene.Declare(builder);
@@ -77,8 +75,6 @@ namespace SpectralPathTracer
                 data.Scene.Bind(cmd, data.Shader, data.Kernel);
                 cmd.DispatchCompute(data.Shader, data.Kernel, data.Args, 0); // the group count comes from the GPU
             });
-
-            return hits;
         }
     }
 }

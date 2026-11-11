@@ -20,6 +20,7 @@
 #include "../../Runtime/Rendering/GpuData/GpuHit.cs.hlsl"
 #include "../../Runtime/Rendering/GpuData/GpuPathState.cs.hlsl"
 #include "../../Runtime/Rendering/GpuData/PathFlags.cs.hlsl"
+#include "../../Runtime/Rendering/GpuData/QueueSizes.cs.hlsl"
 
 #include "../../Runtime/Scene/GpuData/ShapeType.cs.hlsl"
 #include "../../Runtime/Scene/GpuData/MaterialType.cs.hlsl"

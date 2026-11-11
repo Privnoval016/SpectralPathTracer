@@ -8,6 +8,7 @@
 
 #include "../Include/Paths/Rays.hlsl"
 #include "../Include/Trace.hlsl"
+#include "../Include/Paths/Queues.hlsl"
 
 uint _QueueInOffset;
 StructuredBuffer<GpuRay> _Rays;
@@ -20,11 +21,11 @@ RWStructuredBuffer<GpuHit> _Hits;
  * Finds where each queued path's ray hits the scene and records it in the hit buffer.
  * </summary>
  */
-[numthreads(64, 1, 1)]
+[numthreads(QUEUESIZES_GROUP_SIZE, 1, 1)]
 void Intersect(uint3 id : SV_DispatchThreadID)
 {
     // the dispatch rounds up to whole groups, so extra threads exit
-    if (id.x >= _Counters.Load(_QueueInOffset))
+    if (id.x >= QueueCount(_Counters, _QueueInOffset))
         return;
 
     uint slot = _QueueIn[id.x];

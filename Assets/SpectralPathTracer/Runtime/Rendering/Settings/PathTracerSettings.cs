@@ -57,21 +57,32 @@ namespace SpectralPathTracer
 
         #region Properties
 
-        public bool IsEnabledForCurrentMode => Application.isPlaying ? RenderInPlayMode : RenderInEditMode;
-        
-        /** <summary>The resolution to render at right now.</summary> */
-        public Vector2Int RenderResolution
-        {
-            get
-            {
-                float scale = Application.isPlaying ? playModeScale : editModeScale;
-                return new Vector2Int(
-                    Mathf.Max(1, Mathf.RoundToInt(OutputResolution.x * scale)),
-                    Mathf.Max(1, Mathf.RoundToInt(OutputResolution.y * scale)));
-            }
-        }
+        public float OutputAspectRatio => (float)OutputResolution.x / OutputResolution.y;
 
-        
         #endregion
+
+        /**
+         * <summary>
+         * Whether the path tracer renders in Play Mode or Edit Mode.
+         * </summary>
+         * <param name="isPlaying">Whether the Editor is in Play Mode.</param>
+         * <returns>True if it renders in that mode.</returns>
+         */
+        public bool IsEnabledFor(bool isPlaying) => isPlaying ? RenderInPlayMode : RenderInEditMode;
+
+        /**
+         * <summary>
+         * The resolution to render at in Play Mode or Edit Mode.
+         * </summary>
+         * <param name="isPlaying">Whether the Editor is in Play Mode.</param>
+         * <returns>The render resolution.</returns>
+         */
+        public Vector2Int RenderResolutionFor(bool isPlaying)
+        {
+            float scale = isPlaying ? playModeScale : editModeScale;
+            return new Vector2Int(
+                Mathf.Max(1, Mathf.RoundToInt(OutputResolution.x * scale)),
+                Mathf.Max(1, Mathf.RoundToInt(OutputResolution.y * scale)));
+        }
     }
 }

@@ -32,6 +32,9 @@ namespace SpectralPathTracer
         private RenderParams _params;
         private uint _sampleCount;
 
+        private Camera _camera;
+        private Camera _reportedCamera;
+
         #endregion
 
         /**
@@ -67,11 +70,11 @@ namespace SpectralPathTracer
         public bool TryRecord(RenderGraph renderGraph, Camera camera, out TextureHandle display)
         {
             display = TextureHandle.nullHandle;
-            if (!_sceneCompiler.TryUpdate(out bool sceneChanged))
+            if (!TryClaimCamera(camera) || !_sceneCompiler.TryUpdate(out bool sceneChanged))
                 return false;
 
-            var pinhole = PinholeCamera.From(camera, _settings);
-            var renderParams = RenderParams.From(_settings, _aovSettings, pinhole);
+            var pinhole = PinholeCamera.From(camera, _settings.OutputAspectRatio);
+            var renderParams = RenderParams.From(_settings, _aovSettings, pinhole, Application.isPlaying);
 
             UpdateAccumulation(renderParams, sceneChanged);
             bool accumulating = !_settings.Paused && (_settings.TargetSamples == 0 || _sampleCount < _settings.TargetSamples);
@@ -106,6 +109,28 @@ namespace SpectralPathTracer
         }
 
         #region Helpers
+
+        /**
+         * <summary>
+         * Keeps the renderer on one camera, since its sums belong to a single view.
+         * </summary>
+         * <param name="camera">The camera asking to render.</param>
+         * <returns>False if another active camera already owns the renderer.</returns>
+         */
+        private bool TryClaimCamera(Camera camera)
+        {
+            if (_camera == null || !_camera.isActiveAndEnabled)
+                _camera = camera;
+
+            if (camera == _camera)
+                return true;
+
+            if (camera != _reportedCamera)
+                Debug.LogWarning($"Path tracer: rendering {_camera.name} only, so {camera.name} is skipped.");
+
+            _reportedCamera = camera;
+            return false;
+        }
 
         /**
          * <summary>
@@ -181,8 +206,8 @@ namespace SpectralPathTracer
                 // depth 0 is the camera ray's hit, so N bounces take N + 1 passes
                 for (int depth = 0; depth <= frame.MaxBounces; depth++)
                 {
-                    BufferHandle hits = _intersectStage.Record(renderGraph, frame, paths, scene, depth);
-                    _shadeStage.Record(renderGraph, frame, paths, hits, scene, depth);
+                    _intersectStage.Record(renderGraph, frame, paths, scene, depth);
+                    _shadeStage.Record(renderGraph, frame, paths, scene, depth);
 
                     // only the live paths Shade queued get dispatched next, so after the last bounce nothing needs to read the queue
                     if (depth < frame.MaxBounces)

@@ -16,6 +16,7 @@
 #include "../Include/Materials/Bsdf.hlsl"
 #include "../Include/Paths/RayOffset.hlsl"
 #include "../Include/Paths/RussianRoulette.hlsl"
+#include "../Include/Paths/Queues.hlsl"
 #include "../Include/Sampling/Sampler.hlsl"
 
 uint _Depth;
@@ -33,11 +34,11 @@ uint _QueueOutOffset;
  * Adds the light each path finds at its hit, then samples the path's next bounce or finishes it.
  * </summary>
  */
-[numthreads(64, 1, 1)]
+[numthreads(QUEUESIZES_GROUP_SIZE, 1, 1)]
 void Shade(uint3 id : SV_DispatchThreadID)
 {
     // the dispatch rounds up to whole groups, so extra threads exit
-    if (id.x >= _Counters.Load(_QueueInOffset))
+    if (id.x >= QueueCount(_Counters, _QueueInOffset))
         return;
 
     uint slot = _QueueIn[id.x];
@@ -81,11 +82,7 @@ void Shade(uint3 id : SV_DispatchThreadID)
                 ray.Origin = OffsetRayOrigin(surface.Position, surface.Facing);
                 ray.Direction = bsdf.Direction;
                 StoreRay(_Rays, slot, ray);
-
-                // each thread gets its own slot, so the queue stays packed
-                uint queuePosition;
-                _Counters.InterlockedAdd(_QueueOutOffset, 1u, queuePosition);
-                _QueueOut[queuePosition] = slot;
+                Enqueue(_QueueOut, _Counters, _QueueOutOffset, slot);
             }
             else
                 Finish(path); // out of light, or stopped by roulette

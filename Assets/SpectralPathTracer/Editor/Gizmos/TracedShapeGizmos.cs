@@ -47,7 +47,7 @@ namespace SpectralPathTracer
 
         private static Color ShapeColor(TracedShape shape)
         {
-            return shape.Material != null ? shape.Material.Albedo : SceneCompiler.DefaultAlbedo;
+            return shape.Material != null ? shape.Material.Albedo : SpectralMaterial.DefaultAlbedo;
         }
 
         #endregion

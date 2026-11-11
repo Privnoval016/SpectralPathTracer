@@ -30,18 +30,18 @@ namespace SpectralPathTracer
 
         /**
          * <summary>
-         * Builds the pinhole camera for a Unity camera rendering at the settings' output resolution.
+         * Builds the pinhole camera for a Unity camera.
          * </summary>
          * <param name="camera">The Unity camera.</param>
-         * <param name="settings">The path tracer settings.</param>
+         * <param name="aspectRatio">The image's width over its height.</param>
          * <returns>The matching pinhole camera.</returns>
          */
-        public static PinholeCamera From(Camera camera, PathTracerSettings settings)
+        public static PinholeCamera From(Camera camera, float aspectRatio)
         {
             return new PinholeCamera(
                 camera.transform.localToWorldMatrix,
                 Mathf.Tan(camera.fieldOfView * 0.5f * Mathf.Deg2Rad),
-                (float)settings.OutputResolution.x / settings.OutputResolution.y);
+                aspectRatio);
         }
 
         /**

@@ -9,9 +9,18 @@ namespace SpectralPathTracer
      */
     public readonly struct PathBuffers
     {
+        #region Private Fields
+
+        // byte offsets of each queue's count in the counter buffer
+        private const int QueueAOffset = 0;
+        private const int QueueBOffset = sizeof(uint);
+
+        #endregion
+
         #region Properties
 
         public BufferHandle Rays { get; }
+        public BufferHandle Hits { get; }
         public BufferHandle Paths { get; }
 
         /**
@@ -31,9 +40,10 @@ namespace SpectralPathTracer
 
         #endregion
 
-        public PathBuffers(BufferHandle rays, BufferHandle paths, int waveStart, int count, BufferHandle queueA, BufferHandle queueB, BufferHandle counters, BufferHandle args)
+        public PathBuffers(BufferHandle rays, BufferHandle hits, BufferHandle paths, int waveStart, int count, BufferHandle queueA, BufferHandle queueB, BufferHandle counters, BufferHandle args)
         {
             Rays = rays;
+            Hits = hits;
             Paths = paths;
             WaveStart = waveStart;
             Count = count;
@@ -52,7 +62,7 @@ namespace SpectralPathTracer
          * <param name="depth">The bounce depth.</param>
          * <returns>The queue of live paths at that depth.</returns>
          */
-        public BufferHandle QueueIn(int depth) => depth % 2 == 0 ? QueueA : QueueB;
+        public WorkQueue QueueIn(int depth) => depth % 2 == 0 ? new WorkQueue(QueueA, QueueAOffset) : new WorkQueue(QueueB, QueueBOffset);
 
         /**
          * <summary>
@@ -61,24 +71,6 @@ namespace SpectralPathTracer
          * <param name="depth">The bounce depth.</param>
          * <returns>The queue for the next depth.</returns>
          */
-        public BufferHandle QueueOut(int depth) => depth % 2 == 0 ? QueueB : QueueA;
-
-        /**
-         * <summary>
-         * Byte offset of the read queue's count in the counter buffer.
-         * </summary>
-         * <param name="depth">The bounce depth.</param>
-         * <returns>0 for queue A, 4 for queue B.</returns>
-         */
-        public static int QueueInOffset(int depth) => depth % 2 * sizeof(uint);
-
-        /**
-         * <summary>
-         * Byte offset of the append queue's count in the counter buffer.
-         * </summary>
-         * <param name="depth">The bounce depth.</param>
-         * <returns>4 for queue B, 0 for queue A.</returns>
-         */
-        public static int QueueOutOffset(int depth) => (depth + 1) % 2 * sizeof(uint);
+        public WorkQueue QueueOut(int depth) => QueueIn(depth + 1);
     }
 }

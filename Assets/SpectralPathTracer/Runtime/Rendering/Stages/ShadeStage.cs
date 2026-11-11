@@ -33,6 +33,7 @@ namespace SpectralPathTracer
 
         public ShadeStage(ComputeShader shader) : base(shader, KernelName)
         {
+            CheckGroupSize((int)QueueSizes.GroupSize);
         }
 
         /**
@@ -42,35 +43,37 @@ namespace SpectralPathTracer
          * <param name="renderGraph">The render graph recording this frame.</param>
          * <param name="frame">This frame's context.</param>
          * <param name="paths">The rays and path states, where each path's state is updated by this stage.</param>
-         * <param name="hits">The hit buffer written by the intersect stage.</param>
          * <param name="scene">The scene's object and material buffers, imported this frame.</param>
          * <param name="depth">Which hit along the path this is; 0 is the camera ray's.</param>
          */
-        public void Record(RenderGraph renderGraph, in FrameContext frame, in PathBuffers paths, BufferHandle hits, in SceneBuffers scene, int depth)
+        public void Record(RenderGraph renderGraph, in FrameContext frame, in PathBuffers paths, in SceneBuffers scene, int depth)
         {
             using var builder = renderGraph.AddComputePass("Path Tracer: Shade", out PassData passData);
 
             passData.Shader = Shader;
             passData.Kernel = Kernel;
             passData.Rays = paths.Rays;
-            passData.Hits = hits;
+            passData.Hits = paths.Hits;
             passData.Paths = paths.Paths;
             passData.Depth = depth;
-            passData.QueueIn = paths.QueueIn(depth);
-            passData.QueueOut = paths.QueueOut(depth);
+            WorkQueue queueIn = paths.QueueIn(depth);
+            WorkQueue queueOut = paths.QueueOut(depth);
+
+            passData.QueueIn = queueIn.Slots;
+            passData.QueueOut = queueOut.Slots;
             passData.Counters = paths.Counters;
             passData.Args = paths.Args;
-            passData.QueueInOffset = PathBuffers.QueueInOffset(depth);
-            passData.QueueOutOffset = PathBuffers.QueueOutOffset(depth);
+            passData.QueueInOffset = queueIn.CountOffset;
+            passData.QueueOutOffset = queueOut.CountOffset;
 
             passData.Scene = scene;
             passData.Constants = frame.Constants;
 
             builder.UseBuffer(paths.Rays, AccessFlags.ReadWrite);
-            builder.UseBuffer(hits, AccessFlags.Read);
+            builder.UseBuffer(paths.Hits, AccessFlags.Read);
             builder.UseBuffer(paths.Paths, AccessFlags.ReadWrite);
-            builder.UseBuffer(paths.QueueIn(depth), AccessFlags.Read);
-            builder.UseBuffer(paths.QueueOut(depth), AccessFlags.ReadWrite);
+            builder.UseBuffer(queueIn.Slots, AccessFlags.Read);
+            builder.UseBuffer(queueOut.Slots, AccessFlags.ReadWrite);
             builder.UseBuffer(paths.Counters, AccessFlags.ReadWrite);
             builder.UseBuffer(paths.Args, AccessFlags.Read);
             scene.Declare(builder);

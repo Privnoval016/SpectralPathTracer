@@ -35,6 +35,18 @@ namespace SpectralPathTracer
 
         /**
          * <summary>
+         * Logs an error when the kernel's group size differs from the one its dispatch assumes.
+         * </summary>
+         * <param name="expected">The group size the dispatch assumes.</param>
+         */
+        protected void CheckGroupSize(int expected)
+        {
+            if (GroupSizeX != expected)
+                Debug.LogError($"Path tracer: {Shader.name} runs {GroupSizeX} threads per group but its dispatch assumes {expected}.");
+        }
+
+        /**
+         * <summary>
          * Number of thread groups needed to cover <paramref name="size"/> threads, rounded up.
          * </summary>
          * <param name="size">The number of threads.</param>

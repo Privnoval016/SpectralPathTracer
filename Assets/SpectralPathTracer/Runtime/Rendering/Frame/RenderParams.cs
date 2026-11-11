@@ -51,12 +51,13 @@ namespace SpectralPathTracer
          * <param name="settings">The path tracer settings.</param>
          * <param name="aovSettings">Which AOV to show, and how.</param>
          * <param name="camera">This frame's camera.</param>
+         * <param name="isPlaying">Whether the Editor is in Play Mode.</param>
          * <returns>The parameters to render with.</returns>
          */
-        public static RenderParams From(PathTracerSettings settings, AovSettings aovSettings, PinholeCamera camera)
+        public static RenderParams From(PathTracerSettings settings, AovSettings aovSettings, PinholeCamera camera, bool isPlaying)
         {
             var depthRange = new Vector2(aovSettings.DepthNear, aovSettings.DepthFar);
-            return new RenderParams(camera, settings.RenderResolution, settings.OutputResolution, settings.MaxBounces, settings.PixelJitter, settings.RussianRoulette, aovSettings.Aov, depthRange, aovSettings.NoiseDimension);
+            return new RenderParams(camera, settings.RenderResolutionFor(isPlaying), settings.OutputResolution, settings.MaxBounces, settings.PixelJitter, settings.RussianRoulette, aovSettings.Aov, depthRange, aovSettings.NoiseDimension);
         }
 
         public bool Equals(RenderParams other)

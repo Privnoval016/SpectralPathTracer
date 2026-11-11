@@ -41,12 +41,15 @@ namespace SpectralPathTracer
          * <param name="frame">This frame's context.</param>
          * <param name="waveStart">The first pixel the wave covers.</param>
          * <param name="count">How many pixels, and so path slots, the wave covers.</param>
-         * <returns>The ray and path buffers, valid for this frame's render graph.</returns>
+         * <returns>The wave's buffers, valid for this frame's render graph.</returns>
          */
         public PathBuffers Record(RenderGraph renderGraph, in FrameContext frame, int waveStart, int count)
         {
             var desc = new BufferDesc(count, UnsafeUtility.SizeOf<GpuRay>(), GraphicsBuffer.Target.Structured) { name = "PathTracerRays" };
             BufferHandle rays = renderGraph.CreateBuffer(desc);
+
+            var hitDesc = new BufferDesc(count, UnsafeUtility.SizeOf<GpuHit>(), GraphicsBuffer.Target.Structured) { name = "PathTracerHits" };
+            BufferHandle hits = renderGraph.CreateBuffer(hitDesc);
 
             var pathDesc = new BufferDesc(count, UnsafeUtility.SizeOf<GpuPathState>(), GraphicsBuffer.Target.Structured) { name = "PathTracerPaths" };
             BufferHandle paths = renderGraph.CreateBuffer(pathDesc);
@@ -101,7 +104,7 @@ namespace SpectralPathTracer
                 cmd.DispatchCompute(data.Shader, data.Kernel, data.Groups, 1, 1);
             });
 
-            return new PathBuffers(rays, paths, waveStart, count, queueA, queueB, counters, args);
+            return new PathBuffers(rays, hits, paths, waveStart, count, queueA, queueB, counters, args);
         }
     }
 }

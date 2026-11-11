@@ -9,7 +9,7 @@ namespace SpectralPathTracer
 
         [field: Tooltip("Fraction of incoming light the surface reflects (between 0 and 1).")]
         [field: ColorUsage(false, false)]
-        [field: SerializeField] public Color Albedo { get; private set; } = new Color(0.8f, 0.8f, 0.8f);
+        [field: SerializeField] public Color Albedo { get; private set; } = DefaultAlbedo;
 
         [field: Header("Emission")]
 
@@ -20,6 +20,17 @@ namespace SpectralPathTracer
         [field: Tooltip("Emitted radiance scale; 0 means the surface doesn't glow.")]
         [field: Min(0f)]
         [field: SerializeField] public float EmissionStrength { get; private set; } = 0f;
+
+        #endregion
+
+        #region Properties
+
+        /**
+         * <summary>
+         * The albedo of new materials, and of shapes with no material.
+         * </summary>
+         */
+        public static Color DefaultAlbedo { get; } = new Color(0.8f, 0.8f, 0.8f);
 
         #endregion
 

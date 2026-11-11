@@ -37,8 +37,6 @@ namespace SpectralPathTracer
 
         #region Properties
 
-        public static Color DefaultAlbedo { get; } = new Color(0.8f, 0.8f, 0.8f);
-
         public int ObjectCount { get; private set; }
         public SkyColors Sky { get; private set; }
 
@@ -120,8 +118,11 @@ namespace SpectralPathTracer
             _materialIndices.Clear();
             _defaultMaterialIndex = -1;
 
-            foreach (TracedShape shape in TracedRegistry.Shapes)
+            IReadOnlyList<TracedShape> shapes = TracedRegistry.Shapes;
+            for (int i = 0; i < shapes.Count; i++)
             {
+                TracedShape shape = shapes[i];
+
                 // each shape supplies its own matrices, so every record is filled the same way
                 var gpuObject = new GpuObject
                 {
@@ -148,7 +149,7 @@ namespace SpectralPathTracer
             if (material == null)
             {
                 if (_defaultMaterialIndex < 0)
-                    _defaultMaterialIndex = AddMaterial(DefaultAlbedo, Color.black, 0f);
+                    _defaultMaterialIndex = AddMaterial(SpectralMaterial.DefaultAlbedo, Color.black, 0f);
 
                 return _defaultMaterialIndex;
             }
@@ -210,8 +211,11 @@ namespace SpectralPathTracer
         private void CacheTransforms()
         {
             _cachedTransforms.Clear();
-            foreach (TracedShape shape in TracedRegistry.Shapes)
-                _cachedTransforms.Add(shape.transform.localToWorldMatrix);
+
+            // indexing a read-only list skips the boxed enumerator foreach would allocate
+            IReadOnlyList<TracedShape> shapes = TracedRegistry.Shapes;
+            for (int i = 0; i < shapes.Count; i++)
+                _cachedTransforms.Add(shapes[i].transform.localToWorldMatrix);
         }
 
         #endregion

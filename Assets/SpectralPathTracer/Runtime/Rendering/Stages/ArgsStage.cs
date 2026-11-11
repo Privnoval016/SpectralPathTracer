@@ -42,8 +42,8 @@ namespace SpectralPathTracer
             passData.Kernel = Kernel;
             passData.Counters = paths.Counters;
             passData.Args = paths.Args;
-            passData.QueueInOffset = PathBuffers.QueueInOffset(depth);
-            passData.QueueOutOffset = PathBuffers.QueueOutOffset(depth);
+            passData.QueueInOffset = paths.QueueIn(depth).CountOffset;
+            passData.QueueOutOffset = paths.QueueOut(depth).CountOffset;
 
             builder.UseBuffer(paths.Counters, AccessFlags.ReadWrite);
             builder.UseBuffer(paths.Args, AccessFlags.ReadWrite);
