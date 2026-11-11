@@ -39,6 +39,14 @@ namespace SpectralPathTracer
 
         #endregion
 
+        #region Properties
+
+        // check overrides first
+        private int TargetSamples => PathTracerOverrides.TargetSamples ?? _settings.TargetSamples;
+        private float FrameBudgetMs => PathTracerOverrides.FrameBudgetMs ?? _settings.FrameBudgetMs;
+
+        #endregion
+
         /**
          * <summary>
          * Creates the renderer and its stages.
@@ -79,7 +87,7 @@ namespace SpectralPathTracer
             var renderParams = RenderParams.From(_settings, _aovSettings, pinhole, Application.isPlaying);
 
             UpdateAccumulation(renderParams, sceneChanged);
-            bool accumulating = !_settings.Paused && (_settings.TargetSamples == 0 || _sampleCount < _settings.TargetSamples);
+            bool accumulating = !_settings.Paused && (TargetSamples == 0 || _sampleCount < TargetSamples);
 
             BufferHandle constants = _constants.Record(renderGraph, BuildConstants(renderParams));
             var frame = new FrameContext(renderParams, constants);
@@ -94,7 +102,7 @@ namespace SpectralPathTracer
             else
                 _scheduler.Idle();
 
-            AccumulationProgress.Report((int)_sampleCount, _settings.TargetSamples, accumulating);
+            AccumulationProgress.Report((int)_sampleCount, TargetSamples, accumulating);
 
             // runs even while paused, so exposure works on a frozen image
             display = _displayStage.Record(renderGraph, frame, accumulation);
@@ -149,8 +157,9 @@ namespace SpectralPathTracer
         private void UpdateAccumulation(in RenderParams renderParams, bool sceneChanged)
         {
             bool resized = _accumulation.Ensure(renderParams.RenderSize);
+            bool requested = PathTracerOverrides.TakeRestart();
 
-            if (resized || sceneChanged || !renderParams.Equals(_params))
+            if (resized || sceneChanged || requested || !renderParams.Equals(_params))
             {
                 _sampleCount = 0;
                 _scheduler.Restart();
@@ -206,13 +215,13 @@ namespace SpectralPathTracer
             SceneBuffers scene = _sceneCompiler.Import(renderGraph);
 
             int wavesPerSample = (frame.PixelCount + WaveSize - 1) / WaveSize;
-            int waves = _scheduler.Plan(_settings.FrameBudgetMs, wavesPerSample);
+            int waves = _scheduler.Plan(FrameBudgetMs, wavesPerSample);
             RenderStats.ReportFrame(_scheduler.MsPerWave * waves, waves);
 
             for (int i = 0; i < waves; i++)
             {
                 // a new sample only starts below the target
-                if (_scheduler.Cursor == 0 && _settings.TargetSamples != 0 && _sampleCount >= _settings.TargetSamples)
+                if (_scheduler.Cursor == 0 && TargetSamples != 0 && _sampleCount >= TargetSamples)
                     break;
 
                 RecordWave(renderGraph, frame, scene, accumulation, livePaths, _scheduler.Cursor * WaveSize);
