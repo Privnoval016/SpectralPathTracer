@@ -82,7 +82,7 @@ namespace SpectralPathTracer
             var sums = new GraphicsBuffer(GraphicsBuffer.Target.Structured, Inputs.Length, sizeof(float) * 4);
             var values = new Vector4[Inputs.Length];
             for (int i = 0; i < Inputs.Length; i++)
-                values[i] = new Vector4(Inputs[i], Inputs[i], Inputs[i], 1f);
+                values[i] = new Vector4(Inputs[i], Inputs[i], Inputs[i], sampleCount); // w is the pixel's sample count
             sums.SetData(values);
 
             var display = new RenderTexture(Inputs.Length, 1, 0, GraphicsFormat.R32G32B32A32_SFloat) { enableRandomWrite = true };
@@ -91,7 +91,6 @@ namespace SpectralPathTracer
             try
             {
                 shader.SetBuffer(kernel, ShaderIDs.AccumulationID, sums);
-                shader.SetFloat(ShaderIDs.InverseSampleCountID, 1f / sampleCount);
                 shader.SetTexture(kernel, ShaderIDs.DisplayID, display);
                 shader.SetInts(ShaderIDs.ResolutionID, Inputs.Length, 1);
                 shader.SetFloat(ShaderIDs.ExposureScaleID, exposureScale);

@@ -18,7 +18,6 @@ namespace SpectralPathTracer
             public ComputeShader Shader;
             public int Kernel;
             public BufferHandle Accumulation;
-            public float InverseSampleCount;
             public TextureHandle Display;
             public readonly int[] Resolution = new int[2];
             public int GroupsX;
@@ -40,10 +39,9 @@ namespace SpectralPathTracer
          * <param name="renderGraph">The render graph recording this frame.</param>
          * <param name="frame">This frame's context.</param>
          * <param name="accumulation">The per-pixel sums of linear radiance.</param>
-         * <param name="sampleCount">How many samples each sum holds.</param>
          * <returns>The display texture, valid for this frame's render graph.</returns>
          */
-        public TextureHandle Record(RenderGraph renderGraph, in FrameContext frame, BufferHandle accumulation, int sampleCount)
+        public TextureHandle Record(RenderGraph renderGraph, in FrameContext frame, BufferHandle accumulation)
         {
             var desc = new TextureDesc(frame.RenderSize.x, frame.RenderSize.y)
             {
@@ -59,7 +57,6 @@ namespace SpectralPathTracer
             passData.Shader = Shader;
             passData.Kernel = Kernel;
             passData.Accumulation = accumulation;
-            passData.InverseSampleCount = sampleCount > 0 ? 1f / sampleCount : 0f; // no samples yet shows black
             passData.Display = display;
             passData.Resolution[0] = frame.RenderSize.x;
             passData.Resolution[1] = frame.RenderSize.y;
@@ -78,7 +75,6 @@ namespace SpectralPathTracer
             {
                 var cmd = context.cmd;
                 cmd.SetComputeBufferParam(data.Shader, data.Kernel, ShaderIDs.AccumulationID, data.Accumulation);
-                cmd.SetComputeFloatParam(data.Shader, ShaderIDs.InverseSampleCountID, data.InverseSampleCount);
                 cmd.SetComputeTextureParam(data.Shader, data.Kernel, ShaderIDs.DisplayID, data.Display);
                 cmd.SetComputeIntParams(data.Shader, ShaderIDs.ResolutionID, data.Resolution);
                 cmd.SetComputeFloatParam(data.Shader, ShaderIDs.ExposureScaleID, data.ExposureScale);
