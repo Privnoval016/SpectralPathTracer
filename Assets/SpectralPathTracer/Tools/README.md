@@ -10,6 +10,8 @@ accumulation has got, `PathTracerOverrides` to override the target, the budget o
 - `MovieMode` renders a Timeline frame by frame, each to a fixed sample count, and saves PNGs.
 - Tools > Spectral Path Tracer > Furnace Check reads the accumulated radiance back as floats and judges it against
   the scene's `FurnaceExpectation`.
+- Tools > Spectral Path Tracer > Spectrum Check proves the CIE tables, the XYZ to sRGB matrix and the $1/p$ of
+  wavelength sampling against known values.
 
 ## Movie mode
 
@@ -64,3 +66,14 @@ The sphere has no noise at all (every sample is exactly 1), so a single sample i
 It can't see where samples go, only what they weigh, and its paths never reach Russian roulette; the planes cover
 multiple bounces and roulette. Picker colors are sRGB and get converted to linear, so a linear albedo of 0.5 is
 0.735357 in the picker.
+
+## Spectrum check
+
+Seven lines, each PASS or an error on FAIL. It needs no scene.
+
+| Check | Expected | Catches |
+|---|---|---|
+| Sum of $\bar y$ at 1 nm | 106.857 | a wrong or shifted table |
+| Flat light's chromaticity $x$, $y$ | $1/3$, $1/3$ | unequal curve areas |
+| D65 at $Y = 1$ through the matrix | sRGB (1, 1, 1) | a wrong or transposed matrix |
+| Flat $Y$ from 65,536 uniform wavelengths, over the $\bar y$ integral | 1, within 0.02 | a missing $1/p$ (it would read about 0.002) |

@@ -33,7 +33,7 @@ flowchart TD
     resolve --> readback["Read stats<br/>async readback of live paths per depth"]
     readback --> display
     decide -- no --> display
-    display["Display<br/>sum / samples, exposure, clamp"] --> capture["Captures, only when a tool asked<br/>async readback of the display (to sRGB)<br/>or of the sums (float means)"]
+    display["Display<br/>sum / samples, exposure, clamp<br/>(or the gray ramp or spectrum strip)"] --> capture["Captures, only when a tool asked<br/>async readback of the display (to sRGB)<br/>or of the sums (float means)"]
     capture --> present["Present<br/>letterboxed blit to the camera"]
 ```
 
@@ -75,7 +75,8 @@ flowchart TD
   lane bits in its flags mark which lanes still carry light; Resolve divides by their average so terminated lanes are
   made up for. Generate, Shade and Resolve compile an RGB and a `SPECTRAL` variant, and each pass sets the keyword
   both ways on its own command buffer. Until the spectral math arrives the conversions pass colors through, so both
-  variants render the same image.
+  variants render the same image. The CIE 1931 matching functions and the XYZ to sRGB matrix live in `Cie.hlsl`,
+  generated from the C# tables in `Runtime/Spectra`, and Display's spectrum strip draws each wavelength with them.
 - **Frame constants.** Values that hold for the whole frame travel in one constant buffer, `FrameConstants`, uploaded
   once and read through `GpuData.hlsl`. Only per-dispatch values like the depth and queue offsets stay as
   separate uniforms.
