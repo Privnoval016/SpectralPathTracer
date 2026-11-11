@@ -1,6 +1,6 @@
 /**
  * <summary>
- * The per-lane values a path carries, so the same code serves RGB and spectral mode.
+ * The per-lane values a path has, extending to spectral wavelengths.
  * </summary>
  */
 

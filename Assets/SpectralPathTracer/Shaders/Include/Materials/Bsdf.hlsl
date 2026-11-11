@@ -1,6 +1,6 @@
 /**
  * <summary>
- * Sampling, evaluating and the pdf of each material's BSDF, so Shade never branches on material details.
+ * Sampling, evaluating and the pdf of each material's BSDF.
  * </summary>
  */
 
