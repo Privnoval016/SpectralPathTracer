@@ -2,12 +2,14 @@
 
 Debugging and filming tools, in their own assemblies so the core runtime never depends on the Input System or on any
 tool. They talk to the renderer only through static hooks in the runtime: `AccumulationProgress` to read how far
-accumulation has got, `PathTracerOverrides` to override the target, the budget or ask for a restart, and
-`DisplayCapture` to read back a displayed frame.
+accumulation has got, `PathTracerOverrides` to override the target, the budget or ask for a restart,
+`DisplayCapture` to read back a displayed frame, and `AccumulationCapture` to read back each pixel's mean radiance.
 
 - `FlyCamera` flies the camera in Play Mode (WASD, Q and E, look while Space or the right mouse button is held).
 - The "Follow Scene View" overlay makes the Main Camera copy the Scene view in Edit Mode.
 - `MovieMode` renders a Timeline frame by frame, each to a fixed sample count, and saves PNGs.
+- Tools > Spectral Path Tracer > Furnace Check reads the accumulated radiance back as floats and judges it against
+  the scene's `FurnaceExpectation`.
 
 ## Movie mode
 
@@ -46,3 +48,19 @@ sequenceDiagram
 
 Stepping only from the capture callback matters. A step in the same `Update` as the request would restart
 accumulation in the very frame the readback copies, and the file would hold the next frame's first samples.
+
+## Furnace check
+
+The furnaces are scenes with an answer known from the math, in `Scenes/Furnaces/`. Open one with the Game view
+visible, let it render, and run Tools > Spectral Path Tracer > Furnace Check. It logs PASS, or an error on FAIL, with
+the mean, min and max radiance and the sample counts. Run both after every checkpoint that touches light transport.
+
+| Scene | Setup | Expected | Judged on |
+|---|---|---|---|
+| `Furnace` | albedo 1 sphere in a uniform sky of 1 | exactly 1 | every pixel, tolerance $10^{-4}$ |
+| `FurnacePlanes` | two facing planes, emission 1, linear albedo 0.5, black sky | $2 - 2^{-16} = 1.99998$ at 16 bounces | the mean, tolerance $2 \times 10^{-3}$ |
+
+The sphere has no noise at all (every sample is exactly 1), so a single sample is enough and any deviation is a bug.
+It can't see where samples go, only what they weigh, and its paths never reach Russian roulette; the planes cover
+multiple bounces and roulette. Picker colors are sRGB and get converted to linear, so a linear albedo of 0.5 is
+0.735357 in the picker.
