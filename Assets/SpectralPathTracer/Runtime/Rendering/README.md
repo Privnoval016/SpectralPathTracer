@@ -8,9 +8,9 @@ runs one thread per path (or per pixel).
 flowchart TD
     subgraph CPU["CPU, once per frame (PathTracerRenderer)"]
         scene["SceneCompiler.TryUpdate<br/>rebuild GPU scene buffers if anything changed"]
-        reset["Accumulation check<br/>restart the sums and the wave cursor if RenderParams changed"]
+        reset["Accumulation check<br/>restart the sums and the wave cursor if RenderParams changed<br/>or a tool asked for a restart"]
         constants["Frame constants<br/>uploaded once for every stage"]
-        decide{"accumulating?<br/>not paused, below the sample target"}
+        decide{"accumulating?<br/>not paused, below the sample target<br/>(a tool's override wins over the asset)"}
         plan["WaveScheduler.Plan<br/>waves that fit in the frame budget,<br/>from the smoothed ms per wave"]
         scene --> reset --> constants --> decide
         decide -- yes --> plan
@@ -33,7 +33,8 @@ flowchart TD
     resolve --> readback["Read stats<br/>async readback of live paths per depth"]
     readback --> display
     decide -- no --> display
-    display["Display<br/>sum / samples, exposure, clamp"] --> present["Present<br/>letterboxed blit to the camera"]
+    display["Display<br/>sum / samples, exposure, clamp"] --> capture["Capture, only when a tool asked<br/>async readback of the display,<br/>linear to sRGB on the CPU"]
+    capture --> present["Present<br/>letterboxed blit to the camera"]
 ```
 
 | Stage | Threads | Reads | Writes |
@@ -44,6 +45,7 @@ flowchart TD
 | Args | one | counters | dispatch args, counters, live path counts |
 | Resolve | one per slot in the wave | path state, frame constants | accumulation sums |
 | Display | one per pixel | accumulation sums, frame constants | display texture |
+| Capture | none (a copy) | display texture | CPU memory, on request only |
 | Present | raster blit | display texture | camera target |
 
 ## How the parallel parts fit
@@ -64,6 +66,9 @@ flowchart TD
   so one frame can finish one sample and start the next. Budget 0 runs exactly one sample per frame.
 - **Stats.** Args adds each bounce's survivor count to a small buffer that is read back asynchronously, so the
   inspector's counts arrive a few frames late and never stall the GPU.
+- **Tools.** Tools never touch the settings asset, since asset edits made in Play Mode stay after it ends. They set
+  `PathTracerOverrides` (target samples, frame budget, a restart request) and ask `DisplayCapture` for the next
+  displayed frame. Movie mode in `Tools/` is built on both.
 - **Frame constants.** Values that hold for the whole frame travel in one constant buffer, `FrameConstants`, uploaded
   once and read through `GpuData.hlsl`. Only per-dispatch values like the depth and queue offsets stay as
   separate uniforms.
