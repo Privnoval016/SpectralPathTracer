@@ -5,6 +5,7 @@
  */
 
 #pragma kernel Resolve
+#pragma multi_compile_local _ SPECTRAL
 
 #include "../Include/GpuData.hlsl"
 #include "../Include/Paths/PathState.hlsl"

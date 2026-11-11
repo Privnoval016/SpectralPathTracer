@@ -39,6 +39,9 @@ namespace SpectralPathTracer
         [field: Tooltip("Place each sample at a random spot inside its pixel, which anti-aliases edges as samples accumulate.")]
         [field: SerializeField] public bool PixelJitter { get; private set; } = true;
 
+        [field: Tooltip("Carry four wavelengths per path instead of RGB colors.")]
+        [field: SerializeField] public bool Spectral { get; private set; } = false;
+
         [field: Tooltip("Stop accumulating after this many samples per pixel; 0 keeps going forever.")]
         [field: Min(0)]
         [field: SerializeField] public int TargetSamples { get; private set; } = 1024;

@@ -18,6 +18,7 @@ namespace SpectralPathTracer
         protected int Kernel { get; }
         protected int GroupSizeX { get; }
         protected int GroupSizeY { get; }
+        protected LocalKeyword SpectralKeyword { get; } // invalid for kernels with no spectral variant
 
         #endregion
 
@@ -29,6 +30,8 @@ namespace SpectralPathTracer
             shader.GetKernelThreadGroupSizes(Kernel, out uint groupSizeX, out uint groupSizeY, out _);
             GroupSizeX = (int)groupSizeX;
             GroupSizeY = (int)groupSizeY;
+
+            SpectralKeyword = shader.keywordSpace.FindKeyword("SPECTRAL");
         }
 
         #region Helpers
@@ -66,6 +69,21 @@ namespace SpectralPathTracer
         protected static void SetFrameConstants(ComputeCommandBuffer cmd, ComputeShader shader, BufferHandle constants)
         {
             cmd.SetComputeConstantBufferParam(shader, ShaderIDs.FrameConstantsID, constants, 0, FrameConstantsBuffer.Size);
+        }
+
+        /**
+         * <summary>
+         * Picks the spectral or RGB variant for this pass's dispatches.
+         * </summary>
+         * <param name="cmd">The pass's command buffer.</param>
+         * <param name="shader">The stage's shader.</param>
+         * <param name="keyword">The stage's SPECTRAL keyword.</param>
+         * <param name="spectral">Whether to run the spectral variant.</param>
+         */
+        protected static void SetSpectral(ComputeCommandBuffer cmd, ComputeShader shader, in LocalKeyword keyword, bool spectral)
+        {
+            // set both ways, since the state stays on the shader after the pass
+            cmd.SetKeyword(shader, keyword, spectral);
         }
 
         #endregion

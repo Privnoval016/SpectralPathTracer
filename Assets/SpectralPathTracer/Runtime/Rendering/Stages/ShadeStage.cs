@@ -29,6 +29,8 @@ namespace SpectralPathTracer
 
             public SceneBuffers Scene;
             public BufferHandle Constants;
+            public LocalKeyword SpectralKeyword;
+            public bool Spectral;
         }
 
         public ShadeStage(ComputeShader shader) : base(shader, KernelName)
@@ -68,6 +70,8 @@ namespace SpectralPathTracer
 
             passData.Scene = scene;
             passData.Constants = frame.Constants;
+            passData.SpectralKeyword = SpectralKeyword;
+            passData.Spectral = frame.Params.Spectral;
 
             builder.UseBuffer(paths.Rays, AccessFlags.ReadWrite);
             builder.UseBuffer(paths.Hits, AccessFlags.Read);
@@ -78,11 +82,13 @@ namespace SpectralPathTracer
             builder.UseBuffer(paths.Args, AccessFlags.Read);
             scene.Declare(builder);
             builder.UseBuffer(frame.Constants, AccessFlags.Read);
+            builder.AllowGlobalStateModification(true); // the keyword is state on the shader, outside the graph's resources
 
             // static to reject captured variables from the outer scope
             builder.SetRenderFunc(static (PassData data, ComputeGraphContext context) =>
             {
                 var cmd = context.cmd;
+                SetSpectral(cmd, data.Shader, data.SpectralKeyword, data.Spectral);
                 cmd.SetComputeBufferParam(data.Shader, data.Kernel, ShaderIDs.RaysID, data.Rays);
                 cmd.SetComputeBufferParam(data.Shader, data.Kernel, ShaderIDs.HitsID, data.Hits);
                 cmd.SetComputeBufferParam(data.Shader, data.Kernel, ShaderIDs.PathsID, data.Paths);

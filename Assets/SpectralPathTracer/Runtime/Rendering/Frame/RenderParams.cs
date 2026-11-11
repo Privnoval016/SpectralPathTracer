@@ -18,6 +18,7 @@ namespace SpectralPathTracer
         public int MaxBounces { get; }
         public bool PixelJitter { get; }
         public bool RussianRoulette { get; }
+        public bool Spectral { get; }
         public Aov Aov { get; }
         public Vector2 DepthRange { get; }
         public int NoiseDimension { get; }
@@ -31,7 +32,7 @@ namespace SpectralPathTracer
 
         #endregion
 
-        private RenderParams(PinholeCamera camera, Vector2Int renderSize, Vector2Int outputSize, int maxBounces, bool pixelJitter, bool russianRoulette, Aov aov, Vector2 depthRange, int noiseDimension)
+        private RenderParams(PinholeCamera camera, Vector2Int renderSize, Vector2Int outputSize, int maxBounces, bool pixelJitter, bool russianRoulette, bool spectral, Aov aov, Vector2 depthRange, int noiseDimension)
         {
             Camera = camera;
             RenderSize = renderSize;
@@ -39,6 +40,7 @@ namespace SpectralPathTracer
             MaxBounces = maxBounces;
             PixelJitter = pixelJitter;
             RussianRoulette = russianRoulette;
+            Spectral = spectral;
             Aov = aov;
             DepthRange = depthRange;
             NoiseDimension = noiseDimension;
@@ -57,7 +59,7 @@ namespace SpectralPathTracer
         public static RenderParams From(PathTracerSettings settings, AovSettings aovSettings, PinholeCamera camera, bool isPlaying)
         {
             var depthRange = new Vector2(aovSettings.DepthNear, aovSettings.DepthFar);
-            return new RenderParams(camera, settings.RenderResolutionFor(isPlaying), settings.OutputResolution, settings.MaxBounces, settings.PixelJitter, settings.RussianRoulette, aovSettings.Aov, depthRange, aovSettings.NoiseDimension);
+            return new RenderParams(camera, settings.RenderResolutionFor(isPlaying), settings.OutputResolution, settings.MaxBounces, settings.PixelJitter, settings.RussianRoulette, settings.Spectral, aovSettings.Aov, depthRange, aovSettings.NoiseDimension);
         }
 
         public bool Equals(RenderParams other)
@@ -70,6 +72,7 @@ namespace SpectralPathTracer
                 && MaxBounces == other.MaxBounces
                 && PixelJitter == other.PixelJitter
                 && RussianRoulette == other.RussianRoulette
+                && Spectral == other.Spectral
                 && Aov == other.Aov
                 && DepthRange == other.DepthRange
                 && NoiseDimension == other.NoiseDimension;

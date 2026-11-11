@@ -21,6 +21,7 @@ MonoBehaviour:
   <MaxBounces>k__BackingField: 16
   <RussianRoulette>k__BackingField: 1
   <PixelJitter>k__BackingField: 1
+  <Spectral>k__BackingField: 0
   <TargetSamples>k__BackingField: 1024
   <FrameBudgetMs>k__BackingField: 33
   <Exposure>k__BackingField: 0.4
