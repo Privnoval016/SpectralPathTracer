@@ -7,10 +7,30 @@
 #pragma kernel Display
 
 #include "../Include/GpuData.hlsl"
+#include "../Include/Spectrum/Cie.hlsl"
 
 uint2 _Resolution;
 StructuredBuffer<float4> _Accumulation;
 RWTexture2D<float4> _Display;
+
+/**
+ * <summary>
+ * The color of one wavelength at equal power, for the column a pixel is in.
+ * </summary>
+ * <param name="column">The pixel's column.</param>
+ * <returns>The wavelength's linear sRGB color, pulled into the gamut.</returns>
+ */
+float3 SpectrumStrip(uint column)
+{
+    float lambda = lerp(380.0f, 780.0f, (column + 0.5f) / _Resolution.x); // the visible range across the image
+    float3 rgb = XyzToLinearSrgb(MatchingFunctions(lambda));
+
+    // pure wavelengths lie outside sRGB, so add white until no channel is negative
+    rgb -= min(0.0f, min(rgb.r, min(rgb.g, rgb.b)));
+
+
+    return rgb;
+}
 
 /**
  * <summary>
@@ -29,9 +49,13 @@ void Display(uint3 id : SV_DispatchThreadID)
     {
         color = ((id.x + 0.5f) / _Resolution.x).xxx; // linear ramp
     }
-    else if (_ApplyExposure != 0u)
+    else
     {
-        color *= _ExposureScale;
+        if (_ShowSpectrumStrip != 0u)
+            color = SpectrumStrip(id.x); // one wavelength per column, at equal power
+
+        if (_ApplyExposure != 0u)
+            color *= _ExposureScale;
     }
 
     // srgb encoding done with the blit

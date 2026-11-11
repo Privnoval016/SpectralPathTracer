@@ -36,7 +36,7 @@ namespace SpectralPathTracer
 
         public float _ExposureScale; // 160
         public uint _ShowGrayRamp; // 164
-        public uint _Padding0; // 168
+        public uint _ShowSpectrumStrip; // 168
         public uint _Padding1; // 172, 
         
         // size = 176, a multiple of 16

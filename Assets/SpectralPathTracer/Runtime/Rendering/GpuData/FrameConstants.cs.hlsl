@@ -23,7 +23,7 @@ CBUFFER_START(FrameConstants)
     uint _ApplyExposure;
     float _ExposureScale;
     uint _ShowGrayRamp;
-    uint _Padding0;
+    uint _ShowSpectrumStrip;
     uint _Padding1;
 CBUFFER_END
 

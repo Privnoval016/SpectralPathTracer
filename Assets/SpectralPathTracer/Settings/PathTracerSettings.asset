@@ -26,3 +26,4 @@ MonoBehaviour:
   <FrameBudgetMs>k__BackingField: 33
   <Exposure>k__BackingField: 0.4
   <ShowGrayRamp>k__BackingField: 0
+  <ShowSpectrumStrip>k__BackingField: 0

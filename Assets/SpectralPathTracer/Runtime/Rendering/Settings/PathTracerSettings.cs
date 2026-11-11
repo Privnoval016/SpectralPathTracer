@@ -59,6 +59,9 @@ namespace SpectralPathTracer
         [field: Tooltip("Shows a linear gray ramp instead of the image, to check that sRGB encoding happens exactly once.")]
         [field: SerializeField] public bool ShowGrayRamp { get; private set; } = false;
 
+        [field: Tooltip("Replace the image with one wavelength per column, 380 to 780 nm at equal power.")]
+        [field: SerializeField] public bool ShowSpectrumStrip { get; private set; } = false;
+
 
         #endregion
 
