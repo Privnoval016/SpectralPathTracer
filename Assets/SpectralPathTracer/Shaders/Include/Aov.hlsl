@@ -7,12 +7,11 @@
 #ifndef SPT_AOV_INCLUDED
 #define SPT_AOV_INCLUDED
 
-#include "Frame.hlsl"
+#include "GpuData.hlsl"
 #include "Camera.hlsl"
 #include "Paths/Rays.hlsl"
 #include "Sampling/Sampler.hlsl"
 #include "Sampling/Sampling.hlsl"
-#include "../../Runtime/Rendering/Settings/Aov.cs.hlsl"
 
 /**
  * <summary>

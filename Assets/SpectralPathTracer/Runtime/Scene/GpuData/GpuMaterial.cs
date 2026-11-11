@@ -10,5 +10,6 @@ namespace SpectralPathTracer
     {
         public Vector3 Albedo; // linear
         public Vector3 Emission; // linear radiance: color times strength
+        public int Type; // MaterialType
     }
 }

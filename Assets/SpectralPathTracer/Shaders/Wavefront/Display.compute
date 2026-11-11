@@ -6,7 +6,7 @@
 
 #pragma kernel Display
 
-#include "../Include/Frame.hlsl"
+#include "../Include/GpuData.hlsl"
 
 uint2 _Resolution;
 StructuredBuffer<float4> _Accumulation;

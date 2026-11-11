@@ -1,17 +1,20 @@
 /**
  * <summary>
- * Scene object and material records, and the per-shape choice of intersection and normal.
+ * The scene's tables, and the per-shape choice of intersection and normal.
  * </summary>
  */
 
 #ifndef SPT_SCENE_DATA_INCLUDED
 #define SPT_SCENE_DATA_INCLUDED
 
+#include "GpuData.hlsl"
 #include "Shapes/Quadric.hlsl"
 #include "Shapes/Quad.hlsl"
-#include "../../Runtime/Rendering/GpuData/ShapeType.cs.hlsl"
-#include "../../Runtime/Rendering/GpuData/GpuObject.cs.hlsl"
-#include "../../Runtime/Rendering/GpuData/GpuMaterial.cs.hlsl"
+
+// bound together by SceneBuffers.Bind
+StructuredBuffer<GpuObject> _Objects;
+StructuredBuffer<GpuMaterial> _Materials;
+uint _ObjectCount;
 
 /**
  * <summary>

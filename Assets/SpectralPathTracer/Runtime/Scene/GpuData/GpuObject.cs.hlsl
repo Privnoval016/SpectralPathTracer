@@ -12,6 +12,9 @@ struct GpuObject
     float4x4 WorldToLocal;
     int Type;
     int MaterialIndex;
+    int LightId;
+    int MediumIn;
+    int MediumOut;
 };
 
 

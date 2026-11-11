@@ -7,8 +7,7 @@
 #ifndef SPT_PATH_STATE_INCLUDED
 #define SPT_PATH_STATE_INCLUDED
 
-#include "../../../Runtime/Rendering/GpuData/GpuPathState.cs.hlsl"
-#include "../../../Runtime/Rendering/GpuData/PathFlags.cs.hlsl"
+#include "../GpuData.hlsl"
 
 /**
  * <summary>

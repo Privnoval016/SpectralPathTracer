@@ -27,8 +27,7 @@ namespace SpectralPathTracer
             public int QueueInOffset;
             public int QueueOutOffset;
 
-            public BufferHandle Objects;
-            public BufferHandle Materials;
+            public SceneBuffers Scene;
             public BufferHandle Constants;
         }
 
@@ -64,8 +63,7 @@ namespace SpectralPathTracer
             passData.QueueInOffset = PathBuffers.QueueInOffset(depth);
             passData.QueueOutOffset = PathBuffers.QueueOutOffset(depth);
 
-            passData.Objects = scene.Objects;
-            passData.Materials = scene.Materials;
+            passData.Scene = scene;
             passData.Constants = frame.Constants;
 
             builder.UseBuffer(paths.Rays, AccessFlags.ReadWrite);
@@ -75,8 +73,7 @@ namespace SpectralPathTracer
             builder.UseBuffer(paths.QueueOut(depth), AccessFlags.ReadWrite);
             builder.UseBuffer(paths.Counters, AccessFlags.ReadWrite);
             builder.UseBuffer(paths.Args, AccessFlags.Read);
-            builder.UseBuffer(scene.Objects, AccessFlags.Read);
-            builder.UseBuffer(scene.Materials, AccessFlags.Read);
+            scene.Declare(builder);
             builder.UseBuffer(frame.Constants, AccessFlags.Read);
 
             // static to reject captured variables from the outer scope
@@ -92,8 +89,7 @@ namespace SpectralPathTracer
                 cmd.SetComputeBufferParam(data.Shader, data.Kernel, ShaderIDs.CountersID, data.Counters);
                 cmd.SetComputeIntParam(data.Shader, ShaderIDs.QueueInOffsetID, data.QueueInOffset);
                 cmd.SetComputeIntParam(data.Shader, ShaderIDs.QueueOutOffsetID, data.QueueOutOffset);
-                cmd.SetComputeBufferParam(data.Shader, data.Kernel, ShaderIDs.ObjectsID, data.Objects);
-                cmd.SetComputeBufferParam(data.Shader, data.Kernel, ShaderIDs.MaterialsID, data.Materials);
+                data.Scene.Bind(cmd, data.Shader, data.Kernel);
                 SetFrameConstants(cmd, data.Shader, data.Constants);
                 cmd.DispatchCompute(data.Shader, data.Kernel, data.Args, 0); // the group count comes from the GPU
             });

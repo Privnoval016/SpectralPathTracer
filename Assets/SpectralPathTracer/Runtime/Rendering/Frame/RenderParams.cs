@@ -18,7 +18,6 @@ namespace SpectralPathTracer
         public int MaxBounces { get; }
         public bool PixelJitter { get; }
         public bool RussianRoulette { get; }
-        public SkyColors Sky { get; }
         public Aov Aov { get; }
         public Vector2 DepthRange { get; }
         public int NoiseDimension { get; }
@@ -32,7 +31,7 @@ namespace SpectralPathTracer
 
         #endregion
 
-        private RenderParams(PinholeCamera camera, Vector2Int renderSize, Vector2Int outputSize, int maxBounces, bool pixelJitter, bool russianRoulette, SkyColors sky, Aov aov, Vector2 depthRange, int noiseDimension)
+        private RenderParams(PinholeCamera camera, Vector2Int renderSize, Vector2Int outputSize, int maxBounces, bool pixelJitter, bool russianRoulette, Aov aov, Vector2 depthRange, int noiseDimension)
         {
             Camera = camera;
             RenderSize = renderSize;
@@ -40,7 +39,6 @@ namespace SpectralPathTracer
             MaxBounces = maxBounces;
             PixelJitter = pixelJitter;
             RussianRoulette = russianRoulette;
-            Sky = sky;
             Aov = aov;
             DepthRange = depthRange;
             NoiseDimension = noiseDimension;
@@ -48,18 +46,17 @@ namespace SpectralPathTracer
 
         /**
          * <summary>
-         * Gathers this frame's parameters from the settings, the camera and the sky.
+         * Gathers this frame's parameters from the settings and the camera.
          * </summary>
          * <param name="settings">The path tracer settings.</param>
          * <param name="aovSettings">Which AOV to show, and how.</param>
          * <param name="camera">This frame's camera.</param>
-         * <param name="sky">This frame's sky.</param>
          * <returns>The parameters to render with.</returns>
          */
-        public static RenderParams From(PathTracerSettings settings, AovSettings aovSettings, PinholeCamera camera, SkyColors sky)
+        public static RenderParams From(PathTracerSettings settings, AovSettings aovSettings, PinholeCamera camera)
         {
             var depthRange = new Vector2(aovSettings.DepthNear, aovSettings.DepthFar);
-            return new RenderParams(camera, settings.RenderResolution, settings.OutputResolution, settings.MaxBounces, settings.PixelJitter, settings.RussianRoulette, sky, aovSettings.Aov, depthRange, aovSettings.NoiseDimension);
+            return new RenderParams(camera, settings.RenderResolution, settings.OutputResolution, settings.MaxBounces, settings.PixelJitter, settings.RussianRoulette, aovSettings.Aov, depthRange, aovSettings.NoiseDimension);
         }
 
         public bool Equals(RenderParams other)
@@ -72,9 +69,6 @@ namespace SpectralPathTracer
                 && MaxBounces == other.MaxBounces
                 && PixelJitter == other.PixelJitter
                 && RussianRoulette == other.RussianRoulette
-                && Sky.Zenith == other.Sky.Zenith
-                && Sky.Horizon == other.Sky.Horizon
-                && Sky.Ground == other.Sky.Ground
                 && Aov == other.Aov
                 && DepthRange == other.DepthRange
                 && NoiseDimension == other.NoiseDimension;

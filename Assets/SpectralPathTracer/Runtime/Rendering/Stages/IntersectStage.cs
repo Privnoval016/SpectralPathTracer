@@ -23,9 +23,7 @@ namespace SpectralPathTracer
             public BufferHandle Counters;
             public BufferHandle Args;
             public int QueueInOffset;
-
-            public BufferHandle Objects;
-            public int ObjectCount;
+            public SceneBuffers Scene;
         }
 
         public IntersectStage(ComputeShader shader) : base(shader, KernelName)
@@ -39,7 +37,7 @@ namespace SpectralPathTracer
          * <param name="renderGraph">The render graph recording this frame.</param>
          * <param name="frame">This frame's context.</param>
          * <param name="paths">The wave's rays and queues.</param>
-         * <param name="scene">The scene's object buffer, imported this frame.</param>
+         * <param name="scene">The scene's buffers, imported this frame.</param>
          * <param name="depth">The bounce depth, which picks the queue to read.</param>
          * <returns>The hit buffer, one entry per path slot, valid for this frame's render graph.</returns>
          */
@@ -58,16 +56,14 @@ namespace SpectralPathTracer
             passData.Counters = paths.Counters;
             passData.Args = paths.Args;
             passData.QueueInOffset = PathBuffers.QueueInOffset(depth);
-
-            passData.Objects = scene.Objects;
-            passData.ObjectCount = scene.ObjectCount;
+            passData.Scene = scene;
 
             builder.UseBuffer(paths.Rays, AccessFlags.Read);
             builder.UseBuffer(hits, AccessFlags.Write);
             builder.UseBuffer(paths.QueueIn(depth), AccessFlags.Read);
             builder.UseBuffer(paths.Counters, AccessFlags.Read);
             builder.UseBuffer(paths.Args, AccessFlags.Read);
-            builder.UseBuffer(scene.Objects, AccessFlags.Read);
+            scene.Declare(builder);
 
             // static to reject captured variables from the outer scope
             builder.SetRenderFunc(static (PassData data, ComputeGraphContext context) =>
@@ -78,8 +74,7 @@ namespace SpectralPathTracer
                 cmd.SetComputeBufferParam(data.Shader, data.Kernel, ShaderIDs.QueueInID, data.QueueIn);
                 cmd.SetComputeBufferParam(data.Shader, data.Kernel, ShaderIDs.CountersID, data.Counters);
                 cmd.SetComputeIntParam(data.Shader, ShaderIDs.QueueInOffsetID, data.QueueInOffset);
-                cmd.SetComputeBufferParam(data.Shader, data.Kernel, ShaderIDs.ObjectsID, data.Objects);
-                cmd.SetComputeIntParam(data.Shader, ShaderIDs.ObjectCountID, data.ObjectCount);
+                data.Scene.Bind(cmd, data.Shader, data.Kernel);
                 cmd.DispatchCompute(data.Shader, data.Kernel, data.Args, 0); // the group count comes from the GPU
             });
 

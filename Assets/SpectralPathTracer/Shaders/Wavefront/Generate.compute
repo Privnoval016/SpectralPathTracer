@@ -6,7 +6,7 @@
 
 #pragma kernel Generate
 
-#include "../Include/Frame.hlsl"
+#include "../Include/GpuData.hlsl"
 #include "../Include/Camera.hlsl"
 #include "../Include/Paths/Rays.hlsl"
 #include "../Include/Paths/PathState.hlsl"

@@ -6,7 +6,7 @@
 
 #pragma kernel Resolve
 
-#include "../Include/Frame.hlsl"
+#include "../Include/GpuData.hlsl"
 #include "../Include/Paths/PathState.hlsl"
 
 uint _RayCount;

@@ -12,5 +12,8 @@ namespace SpectralPathTracer
         public Matrix4x4 WorldToLocal;
         public int Type; // ShapeType
         public int MaterialIndex;
+        public int LightId; // -1 when the object isn't a light
+        public int MediumIn; // -1 for vacuum
+        public int MediumOut; // -1 for vacuum
     }
 }

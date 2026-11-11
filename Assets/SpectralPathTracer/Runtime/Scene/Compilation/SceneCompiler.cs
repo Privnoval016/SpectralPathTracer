@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using Unity.Collections.LowLevel.Unsafe;
 using UnityEngine;
 using UnityEngine.Rendering.RenderGraphModule;
 
@@ -7,7 +6,7 @@ namespace SpectralPathTracer
 {
     /**
      * <summary>
-     * Turns the registered scene objects into GPU buffers, rebuilding on scene changes.
+     * Turns the registered scene objects into GPU buffers, rebuilding on scene changes, and picks the sky.
      * </summary>
      */
     public class SceneCompiler
@@ -26,11 +25,13 @@ namespace SpectralPathTracer
 
         private readonly List<Matrix4x4> _cachedTransforms = new List<Matrix4x4>();
 
-        private GraphicsBuffer _objects;
-        private GraphicsBuffer _materials;
+        private readonly GrowableBuffer<GpuObject> _objects = new GrowableBuffer<GpuObject>("PathTracerObjects");
+        private readonly GrowableBuffer<GpuMaterial> _materials = new GrowableBuffer<GpuMaterial>("PathTracerMaterials");
 
         private int _builtVersion = -1;
         private int _defaultMaterialIndex = -1;
+
+        private bool _reportedMultipleSkies;
 
         #endregion
 
@@ -39,24 +40,36 @@ namespace SpectralPathTracer
         public static Color DefaultAlbedo { get; } = new Color(0.8f, 0.8f, 0.8f);
 
         public int ObjectCount { get; private set; }
+        public SkyColors Sky { get; private set; }
 
         #endregion
 
         /**
          * <summary>
-         * Rebuilds and uploads the scene buffers if anything changed since the last build.
+         * Picks the sky, then rebuilds and uploads the scene buffers if anything changed since the last build.
          * </summary>
-         * <returns>True if the scene changed and was rebuilt this frame.</returns>
+         * <param name="changed">True if the sky or the scene changed this frame.</param>
+         * <returns>False if more than one Sky is enabled.</returns>
          */
-        public bool Update()
+        public bool TryUpdate(out bool changed)
         {
-            if (!HasChanged())
+            changed = false;
+            if (!TryResolveSky(out SkyColors sky))
                 return false;
 
-            Rebuild();
-            Upload();
-            CacheTransforms();
-            _builtVersion = TracedRegistry.Version;
+            // sky colors change without a version bump, so compare them directly
+            changed = sky.Zenith != Sky.Zenith || sky.Horizon != Sky.Horizon || sky.Ground != Sky.Ground;
+            Sky = sky;
+
+            if (HasChanged())
+            {
+                Rebuild();
+                Upload();
+                CacheTransforms();
+                _builtVersion = TracedRegistry.Version;
+                changed = true;
+            }
+
             return true;
         }
 
@@ -69,23 +82,21 @@ namespace SpectralPathTracer
          */
         public SceneBuffers Import(RenderGraph renderGraph)
         {
-            return new SceneBuffers(renderGraph.ImportBuffer(_objects), renderGraph.ImportBuffer(_materials), ObjectCount);
+            return new SceneBuffers(_objects.Import(renderGraph), _materials.Import(renderGraph), ObjectCount);
         }
 
 
         public void Dispose()
         {
-            _objects?.Release();
-            _objects = null;
-            _materials?.Release();
-            _materials = null;
+            _objects.Dispose();
+            _materials.Dispose();
         }
 
         #region Helpers
 
         private bool HasChanged()
         {
-            if (_objects == null || _builtVersion != TracedRegistry.Version)
+            if (!_objects.IsCreated || _builtVersion != TracedRegistry.Version)
                 return true;
 
             // a moved object changes no version, so compare every transform against the last build
@@ -117,7 +128,10 @@ namespace SpectralPathTracer
                     Quadric = shape.WorldQuadric,
                     WorldToLocal = shape.WorldToShape,
                     Type = (int)shape.Type,
-                    MaterialIndex = MaterialIndex(shape.Material)
+                    MaterialIndex = MaterialIndex(shape.Material),
+                    LightId = -1, // no light table yet
+                    MediumIn = -1,
+                    MediumOut = -1
                 };
                 _objectData.Add(gpuObject);
             }
@@ -155,18 +169,42 @@ namespace SpectralPathTracer
             _materialData.Add(new GpuMaterial
             {
                 Albedo = new Vector3(linearAlbedo.r, linearAlbedo.g, linearAlbedo.b),
-                Emission = new Vector3(emission.r, emission.g, emission.b)
+                Emission = new Vector3(emission.r, emission.g, emission.b),
+                Type = (int)MaterialType.Lambert
             });
             return _materialData.Count - 1;
         }
 
         private void Upload()
         {
-            EnsureCapacity(ref _objects, _objectData.Count, UnsafeUtility.SizeOf<GpuObject>(), "PathTracerObjects");
-            EnsureCapacity(ref _materials, _materialData.Count, UnsafeUtility.SizeOf<GpuMaterial>(), "PathTracerMaterials");
+            _objects.Upload(_objectData);
+            _materials.Upload(_materialData);
+        }
 
-            _objects.SetData(_objectData);
-            _materials.SetData(_materialData);
+        /**
+        * <summary>
+        * Picks this frame's sky.
+        * </summary>
+        * <param name="sky">The sky to render with.</param>
+        * <returns>False if more than one Sky is enabled.</returns>
+        */
+        private bool TryResolveSky(out SkyColors sky)
+        {
+            IReadOnlyList<Sky> skies = TracedRegistry.Skies;
+
+            if (skies.Count > 1)
+            {
+                if (!_reportedMultipleSkies)
+                    Debug.LogError($"Path tracer: {skies.Count} Sky components are enabled; disable all but one.");
+
+                _reportedMultipleSkies = true;
+                sky = default;
+                return false;
+            }
+
+            _reportedMultipleSkies = false;
+            sky = skies.Count == 1 ? skies[0].Colors : SkyColors.Default;
+            return true;
         }
 
         private void CacheTransforms()
@@ -174,30 +212,6 @@ namespace SpectralPathTracer
             _cachedTransforms.Clear();
             foreach (TracedShape shape in TracedRegistry.Shapes)
                 _cachedTransforms.Add(shape.transform.localToWorldMatrix);
-        }
-
-        /**
-         * <summary>
-         * Makes sure the buffer holds at least <paramref name="count"/> elements, doubling
-         * its capacity when it has to grow.
-         * </summary>
-         * <param name="buffer">The buffer to check.</param>
-         * <param name="count">The number of elements needed.</param>
-         * <param name="stride">The size of one element in bytes.</param>
-         * <param name="name">The buffer's debug name.</param>
-         */
-        private static void EnsureCapacity(ref GraphicsBuffer buffer, int count, int stride, string name)
-        {
-            int needed = Mathf.Max(1, count);
-            if (buffer != null && buffer.count >= needed)
-                return;
-
-            int capacity = buffer == null ? 1 : buffer.count;
-            while (capacity < needed)
-                capacity *= 2;
-
-            buffer?.Release();
-            buffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, capacity, stride) { name = name };
         }
 
         #endregion

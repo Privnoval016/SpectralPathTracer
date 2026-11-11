@@ -6,7 +6,7 @@
 
 #pragma kernel Shade
 
-#include "../Include/Frame.hlsl"
+#include "../Include/GpuData.hlsl"
 #include "../Include/Sky.hlsl"
 #include "../Include/Paths/Rays.hlsl"
 #include "../Include/Paths/PathState.hlsl"
@@ -19,8 +19,6 @@
 uint _Depth;
 RWStructuredBuffer<GpuRay> _Rays;
 StructuredBuffer<GpuHit> _Hits;
-StructuredBuffer<GpuObject> _Objects;
-StructuredBuffer<GpuMaterial> _Materials;
 RWStructuredBuffer<GpuPathState> _Paths;
 StructuredBuffer<uint> _QueueIn;
 RWStructuredBuffer<uint> _QueueOut;

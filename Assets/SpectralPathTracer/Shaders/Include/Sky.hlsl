@@ -8,7 +8,7 @@
 #define SPT_SKY_INCLUDED
 
 #include "Common.hlsl"
-#include "Frame.hlsl"
+#include "GpuData.hlsl"
 
 float3 SkyRadiance(float3 direction)
 {

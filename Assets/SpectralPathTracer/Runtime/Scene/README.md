@@ -11,29 +11,30 @@ flowchart LR
         sky["Sky component<br/>zenith, horizon, ground colors"]
     end
 
-    reg["TracedRegistry<br/>enabled shapes and skies,<br/>Version bumps on add, remove or edit"]
+    reg["TracedRegistry<br/>enabled shapes and skies,<br/>Version bumps on shape add, remove or edit"]
 
     subgraph FRAME["Every frame"]
-        comp["SceneCompiler.Update<br/>Version or any transform changed?<br/>then rebuild and upload"]
-        pass["PathTracerRenderer<br/>picks the one enabled sky"]
+        comp["SceneCompiler.TryUpdate<br/>Version or any transform changed?<br/>then rebuild and upload"]
+        pick["SceneCompiler<br/>picks the one enabled sky"]
     end
 
     subgraph GPU["GPU buffers"]
-        objs["objects<br/>Quadric, WorldToLocal, Type, MaterialIndex"]
-        mtab["materials<br/>Albedo, Emission"]
+        objs["objects<br/>Quadric, WorldToLocal, Type, MaterialIndex,<br/>LightId, MediumIn, MediumOut"]
+        mtab["materials<br/>Albedo, Emission, Type"]
     end
 
     shapes -- "OnEnable, OnDisable, OnValidate" --> reg
     mats -- "OnValidate" --> reg
     sky --> reg
     reg --> comp
-    reg --> pass
+    reg --> pick
     comp --> objs
     comp --> mtab
-    objs --> kernels["Intersect and Shade"]
-    mtab --> kernels
-    pass -- "sky colors in the frame constants" --> kernels
+    objs -- "SceneBuffers.Bind" --> kernels["Intersect and Shade"]
+    mtab -- "SceneBuffers.Bind" --> kernels
+    pick -- "sky colors in the frame constants" --> kernels
     comp -- "rebuilt" --> reset["accumulation restarts"]
+    pick -- "colors changed" --> reset
 ```
 
 | Piece | Role |
@@ -42,6 +43,9 @@ flowchart LR
 | `TracedQuadric` | Spheres and planes. Turns a local $Q$ into world space with $M^{-\top} Q M^{-1}$. |
 | `TracedQuad` | Divides by its `Size` after `worldToLocal`, so the GPU always tests the unit square. |
 | `TracedRegistry` | Static, data only. Moving a transform doesn't bump `Version`, which is why the compiler also compares matrices. |
-| `SceneCompiler` | Rebuilds only when something changed, deduplicates materials into one table, and grows its buffers by doubling. |
+| `SceneCompiler` | Rebuilds only when something changed, deduplicates materials into one table, and picks the sky, comparing its colors every frame since a color edit bumps no version. |
+| `GrowableBuffer<T>` | A persistent structured buffer that doubles its capacity when an upload outgrows it. |
+| `SceneBuffers` | The tables imported for one frame. `Declare` adds the reads to a pass and `Bind` sets every table that `SceneData.hlsl` declares. |
+| `GpuData/` | The GPU records. `LightId` and the medium ids are -1 until the light table and media arrive. |
 
 Emission is front-face only, and a sky with black colors turns the open Cornell box into the classic closed look.

@@ -7,7 +7,7 @@
 #ifndef SPT_SAMPLER_INCLUDED
 #define SPT_SAMPLER_INCLUDED
 
-#include "../Frame.hlsl"
+#include "../GpuData.hlsl"
 
 // fixed dimension mapping for pixel jittering
 static const uint DIMENSION_PIXEL_JITTER_X = 0u;

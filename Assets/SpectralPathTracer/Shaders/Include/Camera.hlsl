@@ -7,7 +7,7 @@
 #ifndef SPT_CAMERA_INCLUDED
 #define SPT_CAMERA_INCLUDED
 
-#include "Frame.hlsl"
+#include "GpuData.hlsl"
 
 /**
  * <summary>

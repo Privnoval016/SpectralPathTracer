@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering.RenderGraphModule;
 
@@ -32,8 +31,6 @@ namespace SpectralPathTracer
 
         private RenderParams _params;
         private uint _sampleCount;
-
-        private bool _reportedMultipleSkies;
 
         #endregion
 
@@ -70,13 +67,13 @@ namespace SpectralPathTracer
         public bool TryRecord(RenderGraph renderGraph, Camera camera, out TextureHandle display)
         {
             display = TextureHandle.nullHandle;
-            if (!TryResolveSky(out SkyColors skyColors))
+            if (!_sceneCompiler.TryUpdate(out bool sceneChanged))
                 return false;
 
             var pinhole = PinholeCamera.From(camera, _settings);
-            var renderParams = RenderParams.From(_settings, _aovSettings, pinhole, skyColors);
+            var renderParams = RenderParams.From(_settings, _aovSettings, pinhole);
 
-            UpdateAccumulation(renderParams);
+            UpdateAccumulation(renderParams, sceneChanged);
             bool accumulating = !_settings.Paused && (_settings.TargetSamples == 0 || _sampleCount < _settings.TargetSamples);
 
             BufferHandle constants = _constants.Record(renderGraph, BuildConstants(renderParams));
@@ -116,11 +113,11 @@ namespace SpectralPathTracer
          * or any setting that changes the rendered image. Exposure applies after the average.
          * </summary>
          * <param name="renderParams">This frame's parameters.</param>
+         * <param name="sceneChanged">Whether the scene or sky changed this frame.</param>
          */
-        private void UpdateAccumulation(in RenderParams renderParams)
+        private void UpdateAccumulation(in RenderParams renderParams, bool sceneChanged)
         {
             bool resized = _accumulation.Ensure(renderParams.RenderSize);
-            bool sceneChanged = _sceneCompiler.Update();
 
             if (resized || sceneChanged || !renderParams.Equals(_params))
             {
@@ -145,9 +142,9 @@ namespace SpectralPathTracer
                 _AspectRatio = renderParams.Camera.AspectRatio,
                 _OutputScale = renderParams.OutputScale,
 
-                _SkyZenithColor = renderParams.Sky.Zenith.linear,
-                _SkyHorizonColor = renderParams.Sky.Horizon.linear,
-                _SkyGroundColor = renderParams.Sky.Ground.linear,
+                _SkyZenithColor = _sceneCompiler.Sky.Zenith.linear,
+                _SkyHorizonColor = _sceneCompiler.Sky.Horizon.linear,
+                _SkyGroundColor = _sceneCompiler.Sky.Ground.linear,
 
                 _SampleIndex = _sampleCount,
                 _MaxBounces = (uint)renderParams.MaxBounces,
@@ -194,32 +191,6 @@ namespace SpectralPathTracer
 
                 _resolveStage.Record(renderGraph, frame, paths, accumulation);
             }
-        }
-
-        /**
-        * <summary>
-        * Picks this frame's sky.
-        * </summary>
-        * <param name="sky">The sky to render with.</param>
-        * <returns>False if more than one Sky is enabled.</returns>
-        */
-        private bool TryResolveSky(out SkyColors sky)
-        {
-            IReadOnlyList<Sky> skies = TracedRegistry.Skies;
-
-            if (skies.Count > 1)
-            {
-                if (!_reportedMultipleSkies)
-                    Debug.LogError($"Path tracer: {skies.Count} Sky components are enabled; disable all but one.");
-
-                _reportedMultipleSkies = true;
-                sky = default;
-                return false;
-            }
-
-            _reportedMultipleSkies = false;
-            sky = skies.Count == 1 ? skies[0].Colors : SkyColors.Default;
-            return true;
         }
 
         #endregion

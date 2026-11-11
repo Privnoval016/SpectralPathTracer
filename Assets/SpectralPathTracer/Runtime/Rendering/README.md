@@ -55,7 +55,7 @@ flowchart TD
   change to the scene or to anything in `RenderParams` (camera, sizes, bounces, sky, AOV) restarts the sums; exposure
   doesn't, because it applies after averaging.
 - **Frame constants.** Values that hold for the whole frame travel in one constant buffer, `FrameConstants`, uploaded
-  once and read through `Frame.hlsl`. Only per-dispatch values like the depth and queue offsets stay as
+  once and read through `GpuData.hlsl`. Only per-dispatch values like the depth and queue offsets stay as
   separate uniforms.
 
 The checkpoint devlogs in `Docs/Checkpoints` explain why each piece is built this way.

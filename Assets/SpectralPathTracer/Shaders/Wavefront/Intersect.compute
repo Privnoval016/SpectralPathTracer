@@ -9,13 +9,11 @@
 #include "../Include/Paths/Rays.hlsl"
 #include "../Include/SceneData.hlsl"
 
-uint _ObjectCount;
 uint _QueueInOffset;
 StructuredBuffer<GpuRay> _Rays;
 StructuredBuffer<uint> _QueueIn;
 ByteAddressBuffer _Counters;
 RWStructuredBuffer<GpuHit> _Hits;
-StructuredBuffer<GpuObject> _Objects;
 
 /**
  * <summary>
