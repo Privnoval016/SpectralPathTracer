@@ -20,6 +20,8 @@ namespace SpectralPathTracer
             public BufferHandle Args;
             public int QueueInOffset;
             public int QueueOutOffset;
+            public int Depth;
+            public BufferHandle LivePaths;
         }
 
         public ArgsStage(ComputeShader shader) : base(shader, KernelName)
@@ -33,8 +35,9 @@ namespace SpectralPathTracer
          * <param name="renderGraph">The render graph recording this frame.</param>
          * <param name="paths">The wave's queues, counters and dispatch arguments.</param>
          * <param name="depth">The depth Shade just ran at.</param>
+         * <param name="livePaths">The per-depth live path counts.</param>
          */
-        public void Record(RenderGraph renderGraph, in PathBuffers paths, int depth)
+        public void Record(RenderGraph renderGraph, in PathBuffers paths, int depth, BufferHandle livePaths)
         {
             using var builder = renderGraph.AddComputePass("Path Tracer: Args", out PassData passData);
 
@@ -44,9 +47,12 @@ namespace SpectralPathTracer
             passData.Args = paths.Args;
             passData.QueueInOffset = paths.QueueIn(depth).CountOffset;
             passData.QueueOutOffset = paths.QueueOut(depth).CountOffset;
+            passData.Depth = depth;
+            passData.LivePaths = livePaths;
 
             builder.UseBuffer(paths.Counters, AccessFlags.ReadWrite);
             builder.UseBuffer(paths.Args, AccessFlags.ReadWrite);
+            builder.UseBuffer(livePaths, AccessFlags.ReadWrite);
 
             // static to reject captured variables from the outer scope
             builder.SetRenderFunc(static (PassData data, ComputeGraphContext context) =>
@@ -56,6 +62,8 @@ namespace SpectralPathTracer
                 cmd.SetComputeBufferParam(data.Shader, data.Kernel, ShaderIDs.ArgsID, data.Args);
                 cmd.SetComputeIntParam(data.Shader, ShaderIDs.QueueInOffsetID, data.QueueInOffset);
                 cmd.SetComputeIntParam(data.Shader, ShaderIDs.QueueOutOffsetID, data.QueueOutOffset);
+                cmd.SetComputeIntParam(data.Shader, ShaderIDs.DepthID, data.Depth);
+                cmd.SetComputeBufferParam(data.Shader, data.Kernel, ShaderIDs.LivePathsID, data.LivePaths);
                 cmd.DispatchCompute(data.Shader, data.Kernel, 1, 1, 1);
             });
         }

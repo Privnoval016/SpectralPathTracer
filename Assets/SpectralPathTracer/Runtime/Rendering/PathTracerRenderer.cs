@@ -28,6 +28,7 @@ namespace SpectralPathTracer
         private readonly SceneCompiler _sceneCompiler = new SceneCompiler();
         private readonly AccumulationBuffer _accumulation = new AccumulationBuffer();
         private readonly FrameConstantsBuffer _constants = new FrameConstantsBuffer();
+        private readonly LivePathStats _liveStats = new LivePathStats();
 
         private RenderParams _params;
         private uint _sampleCount;
@@ -85,7 +86,9 @@ namespace SpectralPathTracer
             BufferHandle accumulation = _accumulation.Import(renderGraph);
             if (accumulating)
             {
-                RecordWavefront(renderGraph, frame, accumulation);
+                BufferHandle livePaths = _liveStats.RecordClear(renderGraph);
+                RecordWavefront(renderGraph, frame, accumulation, livePaths);
+                _liveStats.RecordReadback(renderGraph, livePaths);
                 _sampleCount++;
             }
 
@@ -105,6 +108,7 @@ namespace SpectralPathTracer
         {
             _accumulation.Dispose();
             _constants.Dispose();
+            _liveStats.Dispose();
             _sceneCompiler.Dispose();
         }
 
@@ -193,8 +197,9 @@ namespace SpectralPathTracer
          * <param name="renderGraph">The render graph recording this frame.</param>
          * <param name="frame">This frame's context.</param>
          * <param name="accumulation">The running sums to add this frame's samples to.</param>
+         * <param name="livePaths">The per-depth live path counts, cleared this frame.</param>
          */
-        private void RecordWavefront(RenderGraph renderGraph, in FrameContext frame, BufferHandle accumulation)
+        private void RecordWavefront(RenderGraph renderGraph, in FrameContext frame, BufferHandle accumulation, BufferHandle livePaths)
         {
             SceneBuffers scene = _sceneCompiler.Import(renderGraph);
 
@@ -211,7 +216,7 @@ namespace SpectralPathTracer
 
                     // only the live paths Shade queued get dispatched next, so after the last bounce nothing needs to read the queue
                     if (depth < frame.MaxBounces)
-                        _argsStage.Record(renderGraph, paths, depth);
+                        _argsStage.Record(renderGraph, paths, depth, livePaths);
                 }
 
                 _resolveStage.Record(renderGraph, frame, paths, accumulation);

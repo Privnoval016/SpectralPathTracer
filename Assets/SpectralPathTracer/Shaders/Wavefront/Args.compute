@@ -13,6 +13,9 @@ uint _QueueOutOffset;
 RWByteAddressBuffer _Counters;
 RWByteAddressBuffer _Args;
 
+uint _Depth;
+RWByteAddressBuffer _LivePaths;
+
 /**
  * <summary>
  * Sizes the next bounce's dispatch from the queue Shade filled, and empties the queue it read.
@@ -22,6 +25,13 @@ RWByteAddressBuffer _Args;
 void Args(uint3 id : SV_DispatchThreadID)
 {
     uint count = QueueCount(_Counters, _QueueOutOffset);
+
+    if (_Depth == 0u)
+        _LivePaths.InterlockedAdd(0u, QueueCount(_Counters, _QueueInOffset)); // the first bounce's count is the number of paths that started
+    
+    _LivePaths.InterlockedAdd((_Depth + 1u) * 4u, count); // (depth + 1 (next bounce)) * 4 (the four bytes of a uint) = the next bounce's count in bytes
+    
+    
     _Args.Store3(0u, uint3(QueueGroups(count), 1u, 1u));
     _Counters.Store(_QueueInOffset, 0u);
 }
