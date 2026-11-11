@@ -29,6 +29,55 @@ namespace SpectralPathTracer
 
 
             Report("flat Y by Monte Carlo", EstimateFlatY() / Cie.YIntegral, 1f, 0.02f);
+
+
+            ReportFit("mid gray", new Vector3(0.5f, 0.5f, 0.5f));
+            ReportFit("Cornell red", CornellAlbedo("CornellRed"));
+            ReportFit("Cornell green", CornellAlbedo("CornellGreen"));
+            ReportFit("Cornell white", CornellAlbedo("CornellWhite"));
+
+            // the primaries need the steepest spectra in sRGB
+            ReportFit("pure red", Vector3.right);
+            ReportFit("pure green", Vector3.up);
+            ReportFit("pure blue", Vector3.forward);
+        }
+
+        /**
+         * <summary>
+         * Fits a color, then rebuilds it from the fitted spectrum and reports both errors.
+         * </summary>
+         * <param name="name">The color's name in the log.</param>
+         * <param name="rgb">The linear sRGB color.</param>
+         */
+        private static void ReportFit(string name, Vector3 rgb)
+        {
+            Vector3 coefficients = Vector3.zero; // a flat 0.5 spectrum to start from
+            float deltaE = SigmoidFit.Fit(rgb, ref coefficients);
+            Vector3 nanometres = SigmoidFit.ToNanometres(coefficients);
+
+            // rebuild the color from the nm coefficients with Cie alone, so a slip in ToNanometres shows up too
+            Vector3 xyz = Integrate(lambda => SigmoidSpectrum.Evaluate(nanometres, lambda) * Cie.D65At(lambda));
+            Vector3 rebuilt = Cie.XyzToLinearSrgb(xyz / Integrate(Cie.D65At).y);
+            Vector3 difference = rebuilt - rgb;
+
+            Report($"{name} delta E", deltaE, 0f, 0.1f);
+            Report($"{name} round trip", Mathf.Max(Mathf.Abs(difference.x), Mathf.Abs(difference.y), Mathf.Abs(difference.z)), 0f, 1e-3f);
+        }
+
+        /**
+         * <summary>
+         * Reads a Cornell material's albedo as the GPU sees it.
+         * </summary>
+         * <param name="material">The material asset's name.</param>
+         * <returns>The linear albedo.</returns>
+         */
+        private static Vector3 CornellAlbedo(string material)
+        {
+            var asset = AssetDatabase.LoadAssetAtPath<SpectralMaterial>($"Assets/SpectralPathTracer/Materials/Cornell/{material}.asset");
+            Color linear = asset.Albedo.linear; // the picker holds sRGB, and the compiler linearizes it the same way
+
+
+            return new Vector3(linear.r, linear.g, linear.b);
         }
 
         /**

@@ -30,6 +30,8 @@ namespace SpectralPathTracer
             m33 = 1f
         };
 
+        private static readonly Matrix4x4 SrgbToXyz = XyzToSrgb.inverse; // the way back, so there is no second table to get wrong
+
         #endregion
 
         /**
@@ -81,6 +83,18 @@ namespace SpectralPathTracer
         public static Vector3 XyzToLinearSrgb(Vector3 xyz)
         {
             return XyzToSrgb.MultiplyVector(xyz); // only the upper 3x3 needed to transform a vector
+        }
+
+        /**
+         * <summary>
+         * Converts linear sRGB to CIE XYZ.
+         * </summary>
+         * <param name="rgb">The linear sRGB color.</param>
+         * <returns>The color in XYZ.</returns>
+         */
+        public static Vector3 LinearSrgbToXyz(Vector3 rgb)
+        {
+            return SrgbToXyz.MultiplyVector(rgb);
         }
     }
 }
