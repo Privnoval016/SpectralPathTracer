@@ -6,7 +6,7 @@ namespace SpectralPathTracer
 {
     /**
      * <summary>
-     * Renders the path traced image into a render graph, independent of URP.
+     * Renders the path traced image into a render graph.
      * </summary>
      */
     public class PathTracerRenderer
@@ -28,8 +28,9 @@ namespace SpectralPathTracer
 
         private readonly SceneCompiler _sceneCompiler = new SceneCompiler();
         private readonly AccumulationBuffer _accumulation = new AccumulationBuffer();
+        private readonly FrameConstantsBuffer _constants = new FrameConstantsBuffer();
 
-        private AccumulationSignature _signature;
+        private RenderParams _params;
         private uint _sampleCount;
 
         private bool _reportedMultipleSkies;
@@ -73,13 +74,13 @@ namespace SpectralPathTracer
                 return false;
 
             var pinhole = PinholeCamera.From(camera, _settings);
-            Vector2Int renderSize = _settings.RenderResolution;
+            var renderParams = RenderParams.From(_settings, _aovSettings, pinhole, skyColors);
 
-            UpdateAccumulation(pinhole, renderSize, skyColors);
+            UpdateAccumulation(renderParams);
             bool accumulating = !_settings.Paused && (_settings.TargetSamples == 0 || _sampleCount < _settings.TargetSamples);
 
-            var depthRange = new Vector2(_aovSettings.DepthNear, _aovSettings.DepthFar);
-            var frame = new FrameContext(renderSize, _settings.OutputResolution, _sampleCount, _settings.MaxBounces, pinhole, skyColors, _aovSettings.Aov, depthRange, _aovSettings.NoiseDimension, _settings.Exposure, _settings.ShowGrayRamp, _settings.PixelJitter, _settings.RussianRoulette);
+            BufferHandle constants = _constants.Record(renderGraph, BuildConstants(renderParams));
+            var frame = new FrameContext(renderParams, constants);
 
             BufferHandle accumulation = _accumulation.Import(renderGraph);
             if (accumulating)
@@ -103,6 +104,7 @@ namespace SpectralPathTracer
         public void Dispose()
         {
             _accumulation.Dispose();
+            _constants.Dispose();
             _sceneCompiler.Dispose();
         }
 
@@ -113,21 +115,53 @@ namespace SpectralPathTracer
          * Restarts the running sums when anything upstream of them changed: the scene, the camera, the render size
          * or any setting that changes the rendered image. Exposure applies after the average.
          * </summary>
-         * <param name="camera">This frame's camera.</param>
-         * <param name="renderSize">The size to render at this frame.</param>
-         * <param name="sky">This frame's sky.</param>
+         * <param name="renderParams">This frame's parameters.</param>
          */
-        private void UpdateAccumulation(PinholeCamera camera, Vector2Int renderSize, SkyColors sky)
+        private void UpdateAccumulation(in RenderParams renderParams)
         {
-            bool resized = _accumulation.Ensure(renderSize);
+            bool resized = _accumulation.Ensure(renderParams.RenderSize);
             bool sceneChanged = _sceneCompiler.Update();
-            var signature = new AccumulationSignature(camera, renderSize, _settings.MaxBounces, _settings.PixelJitter, _settings.RussianRoulette, sky, _aovSettings);
 
-            if (resized || sceneChanged || !signature.Equals(_signature))
+            if (resized || sceneChanged || !renderParams.Equals(_params))
             {
                 _sampleCount = 0;
-                _signature = signature;
+                _params = renderParams;
             }
+        }
+
+        /**
+         * <summary>
+         * Packs this frame's values into the layout the shaders read.
+         * </summary>
+         * <param name="renderParams">This frame's parameters.</param>
+         * <returns>This frame's constants.</returns>
+         */
+        private FrameConstants BuildConstants(in RenderParams renderParams)
+        {
+            return new FrameConstants
+            {
+                _CameraToWorld = renderParams.Camera.CameraToWorld,
+                _TanHalfFov = renderParams.Camera.TanHalfFov,
+                _AspectRatio = renderParams.Camera.AspectRatio,
+                _OutputScale = renderParams.OutputScale,
+
+                _SkyZenithColor = renderParams.Sky.Zenith.linear,
+                _SkyHorizonColor = renderParams.Sky.Horizon.linear,
+                _SkyGroundColor = renderParams.Sky.Ground.linear,
+
+                _SampleIndex = _sampleCount,
+                _MaxBounces = (uint)renderParams.MaxBounces,
+                _PixelJitter = renderParams.PixelJitter ? 1u : 0u,
+                _RussianRoulette = renderParams.RussianRoulette ? 1u : 0u,
+
+                _Aov = (uint)renderParams.Aov,
+                _DepthRange = renderParams.DepthRange,
+                _NoiseDimension = (uint)renderParams.NoiseDimension,
+
+                _ExposureScale = Mathf.Pow(2f, _settings.Exposure),
+                _ApplyExposure = renderParams.Aov == Aov.None ? 1u : 0u, // AOVs are data with fixed encodings so they skip exposure
+                _ShowGrayRamp = _settings.ShowGrayRamp ? 1u : 0u
+            };
         }
 
         /**

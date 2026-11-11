@@ -7,15 +7,12 @@
 #ifndef SPT_AOV_INCLUDED
 #define SPT_AOV_INCLUDED
 
+#include "Frame.hlsl"
 #include "Camera.hlsl"
 #include "Paths/Rays.hlsl"
 #include "Sampling/Sampler.hlsl"
 #include "Sampling/Sampling.hlsl"
 #include "../../Runtime/Rendering/Settings/Aov.cs.hlsl"
-
-uint _Aov;
-float2 _DepthRange;
-uint _NoiseDimension;
 
 /**
  * <summary>

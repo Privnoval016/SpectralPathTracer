@@ -6,6 +6,7 @@
 
 #pragma kernel Generate
 
+#include "../Include/Frame.hlsl"
 #include "../Include/Camera.hlsl"
 #include "../Include/Paths/Rays.hlsl"
 #include "../Include/Paths/PathState.hlsl"
@@ -15,7 +16,6 @@
 uint2 _Resolution;
 uint _WaveStart;
 uint _RayCount;
-uint _PixelJitter;
 RWStructuredBuffer<GpuRay> _Rays;
 RWStructuredBuffer<GpuPathState> _Paths;
 RWStructuredBuffer<uint> _QueueOut;

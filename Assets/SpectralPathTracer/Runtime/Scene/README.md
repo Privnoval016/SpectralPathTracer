@@ -15,7 +15,7 @@ flowchart LR
 
     subgraph FRAME["Every frame"]
         comp["SceneCompiler.Update<br/>Version or any transform changed?<br/>then rebuild and upload"]
-        pass["PathTracerPass<br/>picks the one enabled sky"]
+        pass["PathTracerRenderer<br/>picks the one enabled sky"]
     end
 
     subgraph GPU["GPU buffers"]
@@ -32,7 +32,7 @@ flowchart LR
     comp --> mtab
     objs --> kernels["Intersect and Shade"]
     mtab --> kernels
-    pass -- "sky uniforms" --> kernels
+    pass -- "sky colors in the frame constants" --> kernels
     comp -- "rebuilt" --> reset["accumulation restarts"]
 ```
 

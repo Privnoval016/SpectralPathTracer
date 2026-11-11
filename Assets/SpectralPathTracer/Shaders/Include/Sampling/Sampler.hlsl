@@ -7,8 +7,7 @@
 #ifndef SPT_SAMPLER_INCLUDED
 #define SPT_SAMPLER_INCLUDED
 
-uint _SampleIndex;
-float2 _OutputScale;
+#include "../Frame.hlsl"
 
 // fixed dimension mapping for pixel jittering
 static const uint DIMENSION_PIXEL_JITTER_X = 0u;

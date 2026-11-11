@@ -18,9 +18,9 @@ namespace SpectralPathTracer
             public int Kernel;
             public BufferHandle Paths;
             public BufferHandle Accumulation;
-            public int SampleCount;
             public int RayCount;
             public int Groups;
+            public BufferHandle Constants;
         }
 
         public ResolveStage(ComputeShader shader) : base(shader, KernelName)
@@ -44,12 +44,13 @@ namespace SpectralPathTracer
             passData.Kernel = Kernel;
             passData.Paths = paths.Paths;
             passData.Accumulation = accumulation;
-            passData.SampleCount = (int)frame.SampleIndex; // samples already in the sum before this one
             passData.RayCount = paths.Count;
             passData.Groups = GroupCount(paths.Count, GroupSizeX);
+            passData.Constants = frame.Constants;
 
             builder.UseBuffer(paths.Paths, AccessFlags.Read);
             builder.UseBuffer(accumulation, AccessFlags.ReadWrite);
+            builder.UseBuffer(frame.Constants, AccessFlags.Read);
 
             // static to reject captured variables from the outer scope
             builder.SetRenderFunc(static (PassData data, ComputeGraphContext context) =>
@@ -57,8 +58,8 @@ namespace SpectralPathTracer
                 var cmd = context.cmd;
                 cmd.SetComputeBufferParam(data.Shader, data.Kernel, ShaderIDs.PathsID, data.Paths);
                 cmd.SetComputeBufferParam(data.Shader, data.Kernel, ShaderIDs.AccumulationID, data.Accumulation);
-                cmd.SetComputeIntParam(data.Shader, ShaderIDs.SampleCountID, data.SampleCount);
                 cmd.SetComputeIntParam(data.Shader, ShaderIDs.RayCountID, data.RayCount);
+                SetFrameConstants(cmd, data.Shader, data.Constants);
                 cmd.DispatchCompute(data.Shader, data.Kernel, data.Groups, 1, 1);
             });
         }

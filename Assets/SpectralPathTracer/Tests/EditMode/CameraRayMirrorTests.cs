@@ -110,12 +110,14 @@ namespace SpectralPathTracer
             shader.SetInts(ShaderIDs.ResolutionID, Width, Height);
             shader.SetInt(ShaderIDs.WaveStartID, 0);
             shader.SetInt(ShaderIDs.RayCountID, Width * Height);
-            shader.SetMatrix(ShaderIDs.CameraToWorldID, camera.CameraToWorld);
-            shader.SetFloat(ShaderIDs.TanHalfFovYID, camera.TanHalfFov);
-            shader.SetFloat(ShaderIDs.AspectRatioID, camera.AspectRatio);
-            shader.SetInt(ShaderIDs.PixelJitterID, pixelJitter ? 1 : 0);
-            shader.SetInt(ShaderIDs.SampleIndexID, 0);
-            shader.SetVector(ShaderIDs.OutputScaleID, Vector2.one);
+            using GraphicsBuffer constants = TestFrameConstants.Bind(shader, new FrameConstants
+            {
+                _CameraToWorld = camera.CameraToWorld,
+                _TanHalfFov = camera.TanHalfFov,
+                _AspectRatio = camera.AspectRatio,
+                _OutputScale = Vector2.one,
+                _PixelJitter = pixelJitter ? 1u : 0u
+            });
 
             // one wave covering the whole image, one thread per pixel
             shader.GetKernelThreadGroupSizes(kernel, out uint groupSizeX, out _, out _);

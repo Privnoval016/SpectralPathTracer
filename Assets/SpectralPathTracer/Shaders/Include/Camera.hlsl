@@ -1,15 +1,13 @@
 /**
  * <summary>
- * The pinhole camera's uniforms and the ray through any point on the image.
+ * The ray from the pinhole camera through any point on the image.
  * </summary>
  */
 
 #ifndef SPT_CAMERA_INCLUDED
 #define SPT_CAMERA_INCLUDED
 
-float4x4 _CameraToWorld;
-float _TanHalfFov;
-float _AspectRatio;
+#include "Frame.hlsl"
 
 /**
  * <summary>

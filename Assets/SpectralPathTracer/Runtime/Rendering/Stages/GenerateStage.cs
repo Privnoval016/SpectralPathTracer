@@ -26,11 +26,7 @@ namespace SpectralPathTracer
             public int WaveStart;
             public int RayCount;
             public int Groups;
-
-            public PinholeCamera Camera;
-            public uint SampleIndex;
-            public Vector2 OutputScale;
-            public int PixelJitter;
+            public BufferHandle Constants;
         }
 
         public GenerateStage(ComputeShader shader) : base(shader, KernelName)
@@ -80,17 +76,14 @@ namespace SpectralPathTracer
             passData.WaveStart = waveStart;
             passData.RayCount = count;
             passData.Groups = GroupCount(count, GroupSizeX);
-
-            passData.Camera = frame.Camera;
-            passData.SampleIndex = frame.SampleIndex;
-            passData.OutputScale = frame.OutputScale;
-            passData.PixelJitter = frame.PixelJitter ? 1 : 0;
+            passData.Constants = frame.Constants;
 
             builder.UseBuffer(rays, AccessFlags.Write);
             builder.UseBuffer(paths, AccessFlags.Write);
             builder.UseBuffer(queueA, AccessFlags.Write);
             builder.UseBuffer(counters, AccessFlags.Write);
             builder.UseBuffer(args, AccessFlags.Write);
+            builder.UseBuffer(frame.Constants, AccessFlags.Read);
 
             // static to reject captured variables from the outer scope
             builder.SetRenderFunc(static (PassData data, ComputeGraphContext context) =>
@@ -104,9 +97,7 @@ namespace SpectralPathTracer
                 cmd.SetComputeIntParams(data.Shader, ShaderIDs.ResolutionID, data.Resolution);
                 cmd.SetComputeIntParam(data.Shader, ShaderIDs.WaveStartID, data.WaveStart);
                 cmd.SetComputeIntParam(data.Shader, ShaderIDs.RayCountID, data.RayCount);
-                SetCamera(cmd, data.Shader, data.Camera);
-                SetSampler(cmd, data.Shader, data.SampleIndex, data.OutputScale);
-                cmd.SetComputeIntParam(data.Shader, ShaderIDs.PixelJitterID, data.PixelJitter);
+                SetFrameConstants(cmd, data.Shader, data.Constants);
                 cmd.DispatchCompute(data.Shader, data.Kernel, data.Groups, 1, 1);
             });
 

@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.Rendering;
+using UnityEngine.Rendering.RenderGraphModule;
 
 namespace SpectralPathTracer
 {
@@ -44,29 +45,15 @@ namespace SpectralPathTracer
 
         /**
          * <summary>
-         * Sets the camera uniforms from Camera.hlsl on a shader.
-         * </summary>
-         */
-        protected static void SetCamera(ComputeCommandBuffer cmd, ComputeShader shader, PinholeCamera camera)
-        {
-            cmd.SetComputeMatrixParam(shader, ShaderIDs.CameraToWorldID, camera.CameraToWorld);
-            cmd.SetComputeFloatParam(shader, ShaderIDs.TanHalfFovYID, camera.TanHalfFov);
-            cmd.SetComputeFloatParam(shader, ShaderIDs.AspectRatioID, camera.AspectRatio);
-        }
-
-        /**
-         * <summary>
-         * Sets the sampler uniforms from Sampler.hlsl on a shader.
+         * Binds this frame's constant buffer to a shader.
          * </summary>
          * <param name="cmd">The command buffer to record into.</param>
-         * <param name="shader">The shader to set them on.</param>
-         * <param name="sampleIndex">This frame's sample index.</param>
-         * <param name="outputScale">The output resolution divided by the render resolution.</param>
+         * <param name="shader">The shader to bind it to.</param>
+         * <param name="constants">This frame's constant buffer.</param>
          */
-        protected static void SetSampler(ComputeCommandBuffer cmd, ComputeShader shader, uint sampleIndex, Vector2 outputScale)
+        protected static void SetFrameConstants(ComputeCommandBuffer cmd, ComputeShader shader, BufferHandle constants)
         {
-            cmd.SetComputeIntParam(shader, ShaderIDs.SampleIndexID, (int)sampleIndex); // the bits arrive unchanged in the uint uniform
-            cmd.SetComputeVectorParam(shader, ShaderIDs.OutputScaleID, outputScale);
+            cmd.SetComputeConstantBufferParam(shader, ShaderIDs.FrameConstantsID, constants, 0, FrameConstantsBuffer.Size);
         }
 
         #endregion

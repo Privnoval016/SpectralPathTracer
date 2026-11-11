@@ -22,10 +22,7 @@ namespace SpectralPathTracer
             public readonly int[] Resolution = new int[2];
             public int GroupsX;
             public int GroupsY;
-
-            public float ExposureScale;
-            public int ApplyExposure;
-            public int ShowGrayRamp;
+            public BufferHandle Constants;
         }
 
         public DisplayStage(ComputeShader shader) : base(shader, KernelName)
@@ -62,13 +59,11 @@ namespace SpectralPathTracer
             passData.Resolution[1] = frame.RenderSize.y;
             passData.GroupsX = GroupCount(frame.RenderSize.x, GroupSizeX);
             passData.GroupsY = GroupCount(frame.RenderSize.y, GroupSizeY);
-
-            passData.ExposureScale = Mathf.Pow(2f, frame.Exposure);
-            passData.ApplyExposure = frame.Aov == Aov.None ? 1 : 0; // AOVs are data with fixed encodings so they skip exposure
-            passData.ShowGrayRamp = frame.ShowGrayRamp ? 1 : 0;
+            passData.Constants = frame.Constants;
 
             builder.UseBuffer(accumulation, AccessFlags.Read);
             builder.UseTexture(display, AccessFlags.Write);
+            builder.UseBuffer(frame.Constants, AccessFlags.Read);
 
             // static to reject captured variables from the outer scope
             builder.SetRenderFunc(static (PassData data, ComputeGraphContext context) =>
@@ -77,9 +72,7 @@ namespace SpectralPathTracer
                 cmd.SetComputeBufferParam(data.Shader, data.Kernel, ShaderIDs.AccumulationID, data.Accumulation);
                 cmd.SetComputeTextureParam(data.Shader, data.Kernel, ShaderIDs.DisplayID, data.Display);
                 cmd.SetComputeIntParams(data.Shader, ShaderIDs.ResolutionID, data.Resolution);
-                cmd.SetComputeFloatParam(data.Shader, ShaderIDs.ExposureScaleID, data.ExposureScale);
-                cmd.SetComputeIntParam(data.Shader, ShaderIDs.ApplyExposureID, data.ApplyExposure);
-                cmd.SetComputeIntParam(data.Shader, ShaderIDs.ShowGrayRampID, data.ShowGrayRamp);
+                SetFrameConstants(cmd, data.Shader, data.Constants);
                 cmd.DispatchCompute(data.Shader, data.Kernel, data.GroupsX, data.GroupsY, 1);
             });
 

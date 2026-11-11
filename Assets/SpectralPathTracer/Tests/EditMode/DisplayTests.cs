@@ -88,14 +88,18 @@ namespace SpectralPathTracer
             var display = new RenderTexture(Inputs.Length, 1, 0, GraphicsFormat.R32G32B32A32_SFloat) { enableRandomWrite = true };
             display.Create();
 
+            GraphicsBuffer constants = TestFrameConstants.Bind(shader, new FrameConstants
+            {
+                _ExposureScale = exposureScale,
+                _ApplyExposure = applyExposure ? 1u : 0u,
+                _ShowGrayRamp = showGrayRamp ? 1u : 0u
+            });
+
             try
             {
                 shader.SetBuffer(kernel, ShaderIDs.AccumulationID, sums);
                 shader.SetTexture(kernel, ShaderIDs.DisplayID, display);
                 shader.SetInts(ShaderIDs.ResolutionID, Inputs.Length, 1);
-                shader.SetFloat(ShaderIDs.ExposureScaleID, exposureScale);
-                shader.SetInt(ShaderIDs.ApplyExposureID, applyExposure ? 1 : 0);
-                shader.SetInt(ShaderIDs.ShowGrayRampID, showGrayRamp ? 1 : 0);
                 shader.Dispatch(kernel, 1, 1, 1);
 
                 AsyncGPUReadbackRequest request = AsyncGPUReadback.Request(display);
@@ -110,6 +114,7 @@ namespace SpectralPathTracer
             finally
             {
                 sums.Release();
+                constants.Release();
                 display.Release();
                 Object.DestroyImmediate(display);
             }

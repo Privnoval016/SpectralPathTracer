@@ -20,8 +20,6 @@ namespace SpectralPathTracer
             public BufferHandle Hits;
             public BufferHandle Paths;
             public int Depth;
-            public int MaxBounces;
-            public int RussianRoulette;
             public BufferHandle QueueIn;
             public BufferHandle QueueOut;
             public BufferHandle Counters;
@@ -29,17 +27,9 @@ namespace SpectralPathTracer
             public int QueueInOffset;
             public int QueueOutOffset;
 
-            public SkyColors Sky;
-            public PinholeCamera Camera;
-            public Aov Aov;
-            public Vector2 DepthRange;
-            public int NoiseDimension;
-
-            public uint SampleIndex;
-            public Vector2 OutputScale;
-
             public BufferHandle Objects;
             public BufferHandle Materials;
+            public BufferHandle Constants;
         }
 
         public ShadeStage(ComputeShader shader) : base(shader, KernelName)
@@ -67,8 +57,6 @@ namespace SpectralPathTracer
             passData.Hits = hits;
             passData.Paths = paths.Paths;
             passData.Depth = depth;
-            passData.MaxBounces = frame.MaxBounces;
-            passData.RussianRoulette = frame.RussianRoulette ? 1 : 0;
             passData.QueueIn = paths.QueueIn(depth);
             passData.QueueOut = paths.QueueOut(depth);
             passData.Counters = paths.Counters;
@@ -76,17 +64,9 @@ namespace SpectralPathTracer
             passData.QueueInOffset = PathBuffers.QueueInOffset(depth);
             passData.QueueOutOffset = PathBuffers.QueueOutOffset(depth);
 
-            passData.Sky = frame.Sky;
-            passData.Camera = frame.Camera;
-            passData.Aov = frame.Aov;
-            passData.DepthRange = frame.DepthRange;
-            passData.NoiseDimension = frame.NoiseDimension;
-
-            passData.SampleIndex = frame.SampleIndex;
-            passData.OutputScale = frame.OutputScale;
-
             passData.Objects = scene.Objects;
             passData.Materials = scene.Materials;
+            passData.Constants = frame.Constants;
 
             builder.UseBuffer(paths.Rays, AccessFlags.ReadWrite);
             builder.UseBuffer(hits, AccessFlags.Read);
@@ -97,6 +77,7 @@ namespace SpectralPathTracer
             builder.UseBuffer(paths.Args, AccessFlags.Read);
             builder.UseBuffer(scene.Objects, AccessFlags.Read);
             builder.UseBuffer(scene.Materials, AccessFlags.Read);
+            builder.UseBuffer(frame.Constants, AccessFlags.Read);
 
             // static to reject captured variables from the outer scope
             builder.SetRenderFunc(static (PassData data, ComputeGraphContext context) =>
@@ -106,23 +87,14 @@ namespace SpectralPathTracer
                 cmd.SetComputeBufferParam(data.Shader, data.Kernel, ShaderIDs.HitsID, data.Hits);
                 cmd.SetComputeBufferParam(data.Shader, data.Kernel, ShaderIDs.PathsID, data.Paths);
                 cmd.SetComputeIntParam(data.Shader, ShaderIDs.DepthID, data.Depth);
-                cmd.SetComputeIntParam(data.Shader, ShaderIDs.MaxBouncesID, data.MaxBounces);
-                cmd.SetComputeIntParam(data.Shader, ShaderIDs.RussianRouletteID, data.RussianRoulette);
                 cmd.SetComputeBufferParam(data.Shader, data.Kernel, ShaderIDs.QueueInID, data.QueueIn);
                 cmd.SetComputeBufferParam(data.Shader, data.Kernel, ShaderIDs.QueueOutID, data.QueueOut);
                 cmd.SetComputeBufferParam(data.Shader, data.Kernel, ShaderIDs.CountersID, data.Counters);
                 cmd.SetComputeIntParam(data.Shader, ShaderIDs.QueueInOffsetID, data.QueueInOffset);
                 cmd.SetComputeIntParam(data.Shader, ShaderIDs.QueueOutOffsetID, data.QueueOutOffset);
-                cmd.SetComputeVectorParam(data.Shader, ShaderIDs.SkyZenithID, data.Sky.Zenith.linear);
-                cmd.SetComputeVectorParam(data.Shader, ShaderIDs.SkyHorizonID, data.Sky.Horizon.linear);
-                cmd.SetComputeVectorParam(data.Shader, ShaderIDs.SkyGroundID, data.Sky.Ground.linear);
-                SetCamera(cmd, data.Shader, data.Camera);
-                cmd.SetComputeIntParam(data.Shader, ShaderIDs.AovID, (int)data.Aov);
-                cmd.SetComputeVectorParam(data.Shader, ShaderIDs.DepthRangeID, data.DepthRange);
-                cmd.SetComputeIntParam(data.Shader, ShaderIDs.NoiseDimensionID, data.NoiseDimension);
-                SetSampler(cmd, data.Shader, data.SampleIndex, data.OutputScale);
                 cmd.SetComputeBufferParam(data.Shader, data.Kernel, ShaderIDs.ObjectsID, data.Objects);
                 cmd.SetComputeBufferParam(data.Shader, data.Kernel, ShaderIDs.MaterialsID, data.Materials);
+                SetFrameConstants(cmd, data.Shader, data.Constants);
                 cmd.DispatchCompute(data.Shader, data.Kernel, data.Args, 0); // the group count comes from the GPU
             });
         }

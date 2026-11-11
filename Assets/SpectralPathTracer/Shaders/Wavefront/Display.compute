@@ -6,10 +6,9 @@
 
 #pragma kernel Display
 
+#include "../Include/Frame.hlsl"
+
 uint2 _Resolution;
-float _ExposureScale;
-uint _ApplyExposure;
-uint _ShowGrayRamp;
 StructuredBuffer<float4> _Accumulation;
 RWTexture2D<float4> _Display;
 

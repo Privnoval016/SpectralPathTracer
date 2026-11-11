@@ -106,7 +106,7 @@ namespace SpectralPathTracer
             shader.SetBuffer(kernel, SamplesID, samples);
             shader.SetInts(GridSizeID, GridSize, GridSize);
             shader.SetInt(DimensionID, dimension);
-            shader.SetInt(ShaderIDs.SampleIndexID, sampleIndex);
+            using GraphicsBuffer constants = TestFrameConstants.Bind(shader, new FrameConstants { _SampleIndex = (uint)sampleIndex });
 
             shader.GetKernelThreadGroupSizes(kernel, out uint groupSizeX, out uint groupSizeY, out _);
             shader.Dispatch(kernel, (GridSize + (int)groupSizeX - 1) / (int)groupSizeX, (GridSize + (int)groupSizeY - 1) / (int)groupSizeY, 1);
