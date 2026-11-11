@@ -10,7 +10,7 @@
 #include "../Include/Sky.hlsl"
 #include "../Include/Paths/Rays.hlsl"
 #include "../Include/Paths/PathState.hlsl"
-#include "../Include/Lanes.hlsl"
+#include "../Include/Spectrum/SampledSpectrum.hlsl"
 #include "../Include/Trace.hlsl"
 #include "../Include/Aov.hlsl"
 #include "../Include/Materials/Bsdf.hlsl"
@@ -46,6 +46,8 @@ void Shade(uint3 id : SV_DispatchThreadID)
     if (!IsActive(path))
         return;
 
+    SampledWavelengths wavelengths = LoadWavelengths(path);
+
     GpuRay ray = LoadRay(_Rays, slot);
     GpuHit hit = LoadHit(_Hits, slot);
 
@@ -59,18 +61,18 @@ void Shade(uint3 id : SV_DispatchThreadID)
     }
     else if (hit.Hit == 0u)
     {
-        path.Radiance += path.Throughput * RgbToLanes(SkyRadiance(ray.Direction)); // the sky is a light too
+        path.Radiance += path.Throughput * RgbToSpectrum(SkyRadiance(ray.Direction), wavelengths); // the sky is a light too
         Finish(path);
     }
     else
     {
         if (surface.FrontFace)
-            path.Radiance += path.Throughput * RgbToLanes(surface.Material.Emission); // lights emit from their front only
+            path.Radiance += path.Throughput * RgbToSpectrum(surface.Material.Emission, wavelengths); // lights emit from their front only
 
         if (_Depth < _MaxBounces)
         {
             uint2 pixel = OutputPixel(ray.Pixel);
-            BsdfSample bsdf = SampleBsdf(surface.Material, surface.Facing, SampleBsdf2D(pixel, path.SampleIndex, _Depth));
+            BsdfSample bsdf = SampleBsdf(surface.Material, surface.Facing, wavelengths, SampleBsdf2D(pixel, path.SampleIndex, _Depth));
             path.Throughput *= bsdf.Weight;
 
             bool continues = any(path.Throughput > 0.0f);

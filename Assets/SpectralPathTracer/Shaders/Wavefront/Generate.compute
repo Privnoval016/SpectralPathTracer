@@ -10,6 +10,7 @@
 #include "../Include/Camera.hlsl"
 #include "../Include/Paths/Rays.hlsl"
 #include "../Include/Paths/PathState.hlsl"
+#include "../Include/Spectrum/SampledSpectrum.hlsl"
 #include "../Include/Sampling/Sampler.hlsl"
 #include "../Include/Paths/Queues.hlsl"
 
@@ -58,10 +59,11 @@ void Generate(uint3 id : SV_DispatchThreadID)
 
     // nothing gathered yet
     GpuPathState path = (GpuPathState)0; // every reserved field starts at zero
-    path.Throughput = float4(1.0f, 1.0f, 1.0f, 0.0f); // RGB mode's lanes are (r, g, b, 0)
+    path.Throughput = LaneMask(ALL_LANES); // full strength in every lane in use
     path.PixelIndex = pixelIndex;
-    path.Flags = PATHFLAGS_ACTIVE;
+    path.Flags = PATHFLAGS_ACTIVE | ALL_LANES;
     path.SampleIndex = _SampleIndex;
+    StoreWavelengths(path, SampleWavelengths());
     StorePath(_Paths, id.x, path);
 
     // every slot starts alive, so queue A holds the whole wave

@@ -7,7 +7,7 @@
 #ifndef SPT_RUSSIAN_ROULETTE_INCLUDED
 #define SPT_RUSSIAN_ROULETTE_INCLUDED
 
-#include "../Lanes.hlsl"
+#include "../Spectrum/SampledSpectrum.hlsl"
 
 /**
  * <summary>
@@ -17,10 +17,10 @@
  * <param name="u">A uniform random number in [0, 1).</param>
  * <returns>True if the path survives.</returns>
  */
-bool SurvivesRoulette(inout Lanes throughput, float u)
+bool SurvivesRoulette(inout SampledSpectrum throughput, float u)
 {
     bool survives = true;
-    float largestLane = MaxLane(throughput);
+    float largestLane = MaxValue(throughput);
 
     // paths at full strength or brighter always continue
     if (largestLane < 1.0f)

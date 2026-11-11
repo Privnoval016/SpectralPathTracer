@@ -13,6 +13,10 @@ namespace SpectralPathTracer
     public enum PathFlags
     {
         None = 0,
-        Active = 1
+        Active = 1,
+        Lane0 = 2,
+        Lane1 = 4,
+        Lane2 = 8,
+        Lane3 = 16,
     }
 }

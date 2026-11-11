@@ -8,6 +8,7 @@
 
 #include "../Include/GpuData.hlsl"
 #include "../Include/Paths/PathState.hlsl"
+#include "../Include/Spectrum/SampledSpectrum.hlsl"
 
 uint _RayCount;
 StructuredBuffer<GpuPathState> _Paths;
@@ -25,9 +26,13 @@ void Resolve(uint3 id : SV_DispatchThreadID)
         return;
 
     GpuPathState path = LoadPath(_Paths, id.x);
-    float3 radiance = path.Radiance.rgb;
+    SampledWavelengths wavelengths = LoadWavelengths(path);
+
+    // lanes that ended early count as zero, so the survivors are scaled up to stand in for them
+    SampledSpectrum radiance = path.Radiance / AverageValue(LaneMask(path.Flags));
+    float3 rgb = SpectrumToRgb(radiance, wavelengths);
 
     // the first sample after a reset replaces the old sum
     float4 previous = path.SampleIndex == 0u ? float4(0.0f, 0.0f, 0.0f, 0.0f) : _Accumulation[path.PixelIndex];
-    _Accumulation[path.PixelIndex] = previous + float4(radiance, 1.0f); // w counts this pixel's own samples
+    _Accumulation[path.PixelIndex] = previous + float4(rgb, 1.0f); // w counts this pixel's own samples
 }

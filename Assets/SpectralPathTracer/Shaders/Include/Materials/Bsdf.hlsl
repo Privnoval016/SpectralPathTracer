@@ -9,13 +9,13 @@
 
 #include "../Common.hlsl"
 #include "../GpuData.hlsl"
-#include "../Lanes.hlsl"
+#include "../Spectrum/SampledSpectrum.hlsl"
 #include "../Sampling/Sampling.hlsl"
 
 struct BsdfSample
 {
     float3 Direction;
-    Lanes Weight; // f cos / pdf
+    SampledSpectrum Weight; // f cos / pdf
     float Pdf;
 };
 
@@ -25,16 +25,17 @@ struct BsdfSample
  * </summary>
  * <param name="material">The surface's material.</param>
  * <param name="facing">The normal on the side the ray arrived from.</param>
+ * <param name="wavelengths">The path's wavelengths.</param>
  * <param name="u">A 2D uniform random sample in the range [0, 1).</param>
  * <returns>The bounce direction, its weight and its pdf.</returns>
  */
-BsdfSample SampleBsdf(GpuMaterial material, float3 facing, float2 u)
+BsdfSample SampleBsdf(GpuMaterial material, float3 facing, SampledWavelengths wavelengths, float2 u)
 {
     float3 local = SampleCosineHemisphere(u);
 
     BsdfSample bsdf;
     bsdf.Direction = LocalToWorld(local, facing);
-    bsdf.Weight = RgbToLanes(material.Albedo); // f cos / pdf for a Lambertian surface is the albedo
+    bsdf.Weight = RgbToSpectrum(material.Albedo, wavelengths); // f cos / pdf for a Lambertian surface is the albedo
     bsdf.Pdf = CosineHemispherePdf(local.z);
     return bsdf;
 }
@@ -45,13 +46,14 @@ BsdfSample SampleBsdf(GpuMaterial material, float3 facing, float2 u)
  * </summary>
  * <param name="material">The surface's material.</param>
  * <param name="facing">The normal on the side the ray arrived from.</param>
+ * <param name="wavelengths">The path's wavelengths.</param>
  * <param name="direction">The direction light leaves toward.</param>
  * <returns>The BSDF value f, without the cosine.</returns>
  */
-Lanes EvalBsdf(GpuMaterial material, float3 facing, float3 direction)
+SampledSpectrum EvalBsdf(GpuMaterial material, float3 facing, SampledWavelengths wavelengths, float3 direction)
 {
     // light from below the surface never reaches the front
-    return dot(facing, direction) > 0.0f ? RgbToLanes(material.Albedo / PI) : (Lanes)0;
+    return dot(facing, direction) > 0.0f ? RgbToSpectrum(material.Albedo / PI, wavelengths) : (SampledSpectrum)0;
 }
 
 /**
