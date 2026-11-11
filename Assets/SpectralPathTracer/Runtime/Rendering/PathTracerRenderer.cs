@@ -29,6 +29,7 @@ namespace SpectralPathTracer
         private readonly AccumulationBuffer _accumulation = new AccumulationBuffer();
         private readonly FrameConstantsBuffer _constants = new FrameConstantsBuffer();
         private readonly LivePathStats _liveStats = new LivePathStats();
+        private readonly DisplayCapture _capture = new DisplayCapture();
         private readonly WaveScheduler _scheduler = new WaveScheduler();
 
         private RenderParams _params;
@@ -106,6 +107,7 @@ namespace SpectralPathTracer
 
             // runs even while paused, so exposure works on a frozen image
             display = _displayStage.Record(renderGraph, frame, accumulation);
+            _capture.Record(renderGraph, display, frame.RenderSize);
             return true;
         }
 

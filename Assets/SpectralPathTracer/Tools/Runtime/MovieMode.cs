@@ -1,4 +1,6 @@
+using System.IO;
 using UnityEngine;
+using UnityEngine.Experimental.Rendering;
 using UnityEngine.Playables;
 
 namespace SpectralPathTracer
@@ -12,6 +14,8 @@ namespace SpectralPathTracer
         private int _stepReport;
 
         private bool _wasRunInBackground;
+        private bool _capturing;
+        private string _folder;
 
         #endregion
 
@@ -33,6 +37,9 @@ namespace SpectralPathTracer
         [field: Min(1f)]
         [field: SerializeField] public float FrameBudgetMs { get; private set; } = 250f;
 
+        [field: Tooltip("Folder for the frames, relative to the project root; each Timeline gets its own subfolder.")]
+        [field: SerializeField] public string OutputFolder { get; private set; } = "Recordings";
+
         #endregion
 
         #region Properties
@@ -51,6 +58,10 @@ namespace SpectralPathTracer
 
             Director.timeUpdateMode = DirectorUpdateMode.Manual;
             _frame = 0;
+            _capturing = false;
+
+            _folder = Path.Combine(OutputFolder, Director.playableAsset.name);
+            Directory.CreateDirectory(_folder);
 
 
             StepTo(_frame);
@@ -65,11 +76,31 @@ namespace SpectralPathTracer
         private void Update()
         {
             // a report from before the step will still describe the last movie frame
-            if (AccumulationProgress.Reports == _stepReport || AccumulationProgress.Samples < SamplesPerFrame)
+            if (_capturing || AccumulationProgress.Reports == _stepReport || AccumulationProgress.Samples < SamplesPerFrame)
                 return;
 
-            Debug.Log($"Movie frame {_frame + 1} of {FrameCount} reached {AccumulationProgress.Samples} samples");
+            _capturing = true;
+            DisplayCapture.Request(OnCaptured);
+        }
 
+        /**
+         * <summary>
+         * Saves a finished movie frame and steps to the next one.
+         * </summary>
+         * <param name="pixels">The frame's sRGB pixels, bottom row first.</param>
+         * <param name="size">The frame's size in pixels.</param>
+         */
+        private void OnCaptured(Color32[] pixels, Vector2Int size)
+        {
+            // a capture can still land after the movie was stopped
+            if (!enabled)
+                return;
+
+            byte[] png = ImageConversion.EncodeArrayToPNG(pixels, GraphicsFormat.R8G8B8A8_SRGB, (uint)size.x, (uint)size.y);
+            File.WriteAllBytes(Path.Combine(_folder, $"frame_{_frame:D4}.png"), png);
+            Debug.Log($"Movie frame {_frame + 1} of {FrameCount} saved");
+
+            _capturing = false;
             _frame++;
             if (_frame >= FrameCount)
             {
