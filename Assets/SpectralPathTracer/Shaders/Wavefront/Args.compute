@@ -1,6 +1,6 @@
 /**
  * <summary>
- * Turns a bounce's survivor count into the next indirect dispatch size.
+ * Turns a bounce's survivor count into the next indirect dispatch size and the live path stats.
  * </summary>
  */
 
