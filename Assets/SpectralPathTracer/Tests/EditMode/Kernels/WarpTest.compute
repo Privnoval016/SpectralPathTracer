@@ -1,7 +1,7 @@
 #pragma kernel SampleDirections
 
-#include "../../Shaders/Include/Sampler.hlsl"
-#include "../../Shaders/Include/Sampling.hlsl"
+#include "../../../Shaders/Include/Sampling/Sampler.hlsl"
+#include "../../../Shaders/Include/Sampling/Sampling.hlsl"
 
 uint2 _GridSize;
 uint _Warp;

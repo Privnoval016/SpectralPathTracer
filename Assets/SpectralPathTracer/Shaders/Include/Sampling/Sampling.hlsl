@@ -7,7 +7,7 @@
 #ifndef SPT_SAMPLING_INCLUDED
 #define SPT_SAMPLING_INCLUDED
 
-#include "Common.hlsl"
+#include "../Common.hlsl"
 
 /**
  * <summary>

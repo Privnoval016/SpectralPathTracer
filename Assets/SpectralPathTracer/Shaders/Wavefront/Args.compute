@@ -6,7 +6,7 @@
 
 #pragma kernel Args
 
-#include "../Include/Queues.hlsl"
+#include "../Include/Paths/Queues.hlsl"
 
 uint _QueueInOffset;
 uint _QueueOutOffset;

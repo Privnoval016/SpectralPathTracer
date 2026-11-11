@@ -1,6 +1,6 @@
 #pragma kernel SampleGrid
 
-#include "../../Shaders/Include/Sampler.hlsl"
+#include "../../../Shaders/Include/Sampling/Sampler.hlsl"
 
 uint2 _GridSize;
 uint _Dimension;

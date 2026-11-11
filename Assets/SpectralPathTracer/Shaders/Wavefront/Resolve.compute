@@ -6,7 +6,7 @@
 
 #pragma kernel Resolve
 
-#include "../Include/PathState.hlsl"
+#include "../Include/Paths/PathState.hlsl"
 
 uint _RayCount;
 uint _SampleCount;

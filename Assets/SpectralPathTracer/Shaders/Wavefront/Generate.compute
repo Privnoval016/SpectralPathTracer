@@ -7,10 +7,10 @@
 #pragma kernel Generate
 
 #include "../Include/Camera.hlsl"
-#include "../Include/Rays.hlsl"
-#include "../Include/PathState.hlsl"
-#include "../Include/Sampler.hlsl"
-#include "../Include/Queues.hlsl"
+#include "../Include/Paths/Rays.hlsl"
+#include "../Include/Paths/PathState.hlsl"
+#include "../Include/Sampling/Sampler.hlsl"
+#include "../Include/Paths/Queues.hlsl"
 
 uint2 _Resolution;
 uint _WaveStart;

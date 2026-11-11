@@ -6,7 +6,7 @@
 
 #pragma kernel Intersect
 
-#include "../Include/Rays.hlsl"
+#include "../Include/Paths/Rays.hlsl"
 #include "../Include/SceneData.hlsl"
 
 uint _ObjectCount;

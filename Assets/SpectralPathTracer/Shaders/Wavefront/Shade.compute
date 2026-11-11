@@ -7,13 +7,13 @@
 #pragma kernel Shade
 
 #include "../Include/Sky.hlsl"
-#include "../Include/Rays.hlsl"
-#include "../Include/PathState.hlsl"
+#include "../Include/Paths/Rays.hlsl"
+#include "../Include/Paths/PathState.hlsl"
 #include "../Include/SceneData.hlsl"
 #include "../Include/Aov.hlsl"
-#include "../Include/RayOffset.hlsl"
-#include "../Include/Sampler.hlsl"
-#include "../Include/Sampling.hlsl"
+#include "../Include/Paths/RayOffset.hlsl"
+#include "../Include/Sampling/Sampler.hlsl"
+#include "../Include/Sampling/Sampling.hlsl"
 
 uint _Depth;
 uint _MaxBounces;

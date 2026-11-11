@@ -8,9 +8,9 @@
 #define SPT_AOV_INCLUDED
 
 #include "Camera.hlsl"
-#include "Rays.hlsl"
-#include "Sampler.hlsl"
-#include "Sampling.hlsl"
+#include "Paths/Rays.hlsl"
+#include "Sampling/Sampler.hlsl"
+#include "Sampling/Sampling.hlsl"
 #include "../../Runtime/Rendering/Settings/Aov.cs.hlsl"
 
 uint _Aov;

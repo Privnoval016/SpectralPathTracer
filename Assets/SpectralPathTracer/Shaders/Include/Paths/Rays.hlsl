@@ -9,8 +9,8 @@
 
 // kernels only touch the ray and hit buffers through the accessors below, so the layout can change later without touching any kernel
 
-#include "../../Runtime/Rendering/GpuData/GpuRay.cs.hlsl"
-#include "../../Runtime/Rendering/GpuData/GpuHit.cs.hlsl"
+#include "../../../Runtime/Rendering/GpuData/GpuRay.cs.hlsl"
+#include "../../../Runtime/Rendering/GpuData/GpuHit.cs.hlsl"
 
 /**
  * <summary>

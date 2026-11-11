@@ -17,7 +17,7 @@ namespace SpectralPathTracer
     {
         #region Private Fields
 
-        private const string ShaderPath = "Assets/SpectralPathTracer/Tests/EditMode/WarpTest.compute";
+        private const string ShaderPath = "Assets/SpectralPathTracer/Tests/EditMode/Kernels/WarpTest.compute";
         private const string KernelName = "SampleDirections";
 
         private const int CosineWarp = 0;

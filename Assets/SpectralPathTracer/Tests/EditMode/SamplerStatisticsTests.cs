@@ -15,7 +15,7 @@ namespace SpectralPathTracer
     {
         #region Private Fields
 
-        private const string ShaderPath = "Assets/SpectralPathTracer/Tests/EditMode/SamplerTest.compute";
+        private const string ShaderPath = "Assets/SpectralPathTracer/Tests/EditMode/Kernels/SamplerTest.compute";
         private const string KernelName = "SampleGrid";
 
         private const int GridSize = 256; // 65,536 values per draw
