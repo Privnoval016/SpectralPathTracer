@@ -4,6 +4,7 @@
 
 uint2 _GridSize;
 uint _Dimension;
+uint _SampleIndex;
 RWStructuredBuffer<float> _Samples;
 
 /**

@@ -15,16 +15,16 @@ CBUFFER_START(FrameConstants)
     float4 _SkyHorizonColor;
     float4 _SkyGroundColor;
     float2 _DepthRange;
-    uint _SampleIndex;
     uint _MaxBounces;
     uint _Aov;
     uint _NoiseDimension;
     uint _PixelJitter;
     uint _RussianRoulette;
-    float _ExposureScale;
     uint _ApplyExposure;
+    float _ExposureScale;
     uint _ShowGrayRamp;
-    uint _Padding;
+    uint _Padding0;
+    uint _Padding1;
 CBUFFER_END
 
 

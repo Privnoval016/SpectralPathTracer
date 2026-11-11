@@ -25,6 +25,7 @@ namespace SpectralPathTracer
             public readonly int[] Resolution = new int[2];
             public int WaveStart;
             public int RayCount;
+            public uint SampleIndex;
             public int Groups;
             public BufferHandle Constants;
         }
@@ -41,9 +42,10 @@ namespace SpectralPathTracer
          * <param name="frame">This frame's context.</param>
          * <param name="waveStart">The first pixel the wave covers.</param>
          * <param name="count">How many pixels, and so path slots, the wave covers.</param>
+         * <param name="sampleIndex">The sample the wave's paths belong to.</param>
          * <returns>The wave's buffers, valid for this frame's render graph.</returns>
          */
-        public PathBuffers Record(RenderGraph renderGraph, in FrameContext frame, int waveStart, int count)
+        public PathBuffers Record(RenderGraph renderGraph, in FrameContext frame, int waveStart, int count, uint sampleIndex)
         {
             var desc = new BufferDesc(count, UnsafeUtility.SizeOf<GpuRay>(), GraphicsBuffer.Target.Structured) { name = "PathTracerRays" };
             BufferHandle rays = renderGraph.CreateBuffer(desc);
@@ -78,6 +80,7 @@ namespace SpectralPathTracer
             passData.Resolution[1] = frame.RenderSize.y;
             passData.WaveStart = waveStart;
             passData.RayCount = count;
+            passData.SampleIndex = sampleIndex;
             passData.Groups = GroupCount(count, GroupSizeX);
             passData.Constants = frame.Constants;
 
@@ -100,6 +103,7 @@ namespace SpectralPathTracer
                 cmd.SetComputeIntParams(data.Shader, ShaderIDs.ResolutionID, data.Resolution);
                 cmd.SetComputeIntParam(data.Shader, ShaderIDs.WaveStartID, data.WaveStart);
                 cmd.SetComputeIntParam(data.Shader, ShaderIDs.RayCountID, data.RayCount);
+                cmd.SetComputeIntParam(data.Shader, ShaderIDs.SampleIndexID, (int)data.SampleIndex); // the bits arrive unchanged in the uint uniform
                 SetFrameConstants(cmd, data.Shader, data.Constants);
                 cmd.DispatchCompute(data.Shader, data.Kernel, data.Groups, 1, 1);
             });

@@ -13,29 +13,32 @@ namespace SpectralPathTracer
     [StructLayout(LayoutKind.Sequential)]
     public struct FrameConstants
     {
-        // names match the shader uniforms, and each group of fields fills one 16 byte register
-        public Matrix4x4 _CameraToWorld;
-        public float _TanHalfFov;
-        public float _AspectRatio;
-        public Vector2 _OutputScale;
+        // names match the shader uniforms and each group of fields fills one 16 byte register
+        public Matrix4x4 _CameraToWorld; // bytes 0 to 63 (four registers)
+
+        public float _TanHalfFov; // 64
+        public float _AspectRatio; // 68
+        public Vector2 _OutputScale; // 72 to 79
 
         // float4 because Metal pads a float3 to 16 bytes and would shift every field after it
-        public Vector4 _SkyZenithColor;
-        public Vector4 _SkyHorizonColor;
-        public Vector4 _SkyGroundColor;
+        public Vector4 _SkyZenithColor; // 80 to 95
+        public Vector4 _SkyHorizonColor; // 96 to 111
+        public Vector4 _SkyGroundColor; // 112 to 127
 
-        public Vector2 _DepthRange;
-        public uint _SampleIndex;
-        public uint _MaxBounces;
+        public Vector2 _DepthRange; // 128 to 135
+        public uint _MaxBounces; // 136
+        public uint _Aov; // 140
 
-        public uint _Aov;
-        public uint _NoiseDimension;
-        public uint _PixelJitter;
-        public uint _RussianRoulette;
+        public uint _NoiseDimension; // 144
+        public uint _PixelJitter; // 148
+        public uint _RussianRoulette; // 152
+        public uint _ApplyExposure; // 156
 
-        public float _ExposureScale;
-        public uint _ApplyExposure;
-        public uint _ShowGrayRamp;
-        public uint _Padding;
+        public float _ExposureScale; // 160
+        public uint _ShowGrayRamp; // 164
+        public uint _Padding0; // 168
+        public uint _Padding1; // 172, 
+        
+        // size = 176, a multiple of 16
     }
 }

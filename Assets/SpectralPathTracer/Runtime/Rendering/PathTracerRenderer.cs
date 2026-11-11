@@ -175,7 +175,6 @@ namespace SpectralPathTracer
                 _SkyHorizonColor = _sceneCompiler.Sky.Horizon.linear,
                 _SkyGroundColor = _sceneCompiler.Sky.Ground.linear,
 
-                _SampleIndex = _sampleCount,
                 _MaxBounces = (uint)renderParams.MaxBounces,
                 _PixelJitter = renderParams.PixelJitter ? 1u : 0u,
                 _RussianRoulette = renderParams.RussianRoulette ? 1u : 0u,
@@ -206,7 +205,7 @@ namespace SpectralPathTracer
             for (int waveStart = 0; waveStart < frame.PixelCount; waveStart += WaveSize)
             {
                 int waveCount = Mathf.Min(WaveSize, frame.PixelCount - waveStart);
-                PathBuffers paths = _generateStage.Record(renderGraph, frame, waveStart, waveCount);
+                PathBuffers paths = _generateStage.Record(renderGraph, frame, waveStart, waveCount, _sampleCount);
 
                 // depth 0 is the camera ray's hit, so N bounces take N + 1 passes
                 for (int depth = 0; depth <= frame.MaxBounces; depth++)

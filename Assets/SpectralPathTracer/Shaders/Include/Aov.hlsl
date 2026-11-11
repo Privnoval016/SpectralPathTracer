@@ -21,15 +21,16 @@
  * <param name="hit">The ray's hit record.</param>
  * <param name="normal">The surface normal at the hit.</param>
  * <param name="frontFace">Whether the ray hit the outside of the surface.</param>
+ * <param name="sampleIndex">The path's sample index.</param>
  * <returns>The AOV's color for this ray.</returns>
  */
-float3 AovColor(GpuRay ray, GpuHit hit, float3 normal, bool frontFace)
+float3 AovColor(GpuRay ray, GpuHit hit, float3 normal, bool frontFace, uint sampleIndex)
 {
     float3 color = float3(0.0f, 0.0f, 0.0f);
 
     if (_Aov == AOV_NOISE)
     {
-        color = SampleUniform(OutputPixel(ray.Pixel), _SampleIndex, _NoiseDimension).xxx;
+        color = SampleUniform(OutputPixel(ray.Pixel), sampleIndex, _NoiseDimension).xxx;
     }
     else if (hit.Hit != 0u)
     {
@@ -44,7 +45,7 @@ float3 AovColor(GpuRay ray, GpuHit hit, float3 normal, bool frontFace)
             color = frontFace ? float3(0.0f, 1.0f, 0.0f) : float3(1.0f, 0.0f, 0.0f);
         else if (_Aov == AOV_BOUNCE_DIRECTION)
         {
-            float2 u = SampleBsdf2D(OutputPixel(ray.Pixel), 0u);
+            float2 u = SampleBsdf2D(OutputPixel(ray.Pixel), sampleIndex, 0u);
             float3 facing = frontFace ? normal : -normal;
             color = LocalToWorld(SampleCosineHemisphere(u), facing) * 0.5f + 0.5f;
         }

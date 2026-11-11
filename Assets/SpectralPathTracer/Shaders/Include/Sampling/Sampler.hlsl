@@ -47,13 +47,14 @@ uint2 OutputPixel(int2 renderPixel)
  * Draws the two numbers that choose a bounce's direction.
  * </summary>
  * <param name="outputPixel">The pixel coordinates in the output buffer.</param>
+ * <param name="sampleIndex">The path's sample index.</param>
  * <param name="depth">The bounce depth.</param>
  * <returns>A 2D uniform random sample in the range [0, 1).</returns>
  */
-float2 SampleBsdf2D(uint2 outputPixel, uint depth)
+float2 SampleBsdf2D(uint2 outputPixel, uint sampleIndex, uint depth)
 {
-    return float2(SampleUniform(outputPixel, _SampleIndex, BounceDimension(depth, SLOT_BSDF_U)),
-                  SampleUniform(outputPixel, _SampleIndex, BounceDimension(depth, SLOT_BSDF_V)));
+    return float2(SampleUniform(outputPixel, sampleIndex, BounceDimension(depth, SLOT_BSDF_U)),
+                  SampleUniform(outputPixel, sampleIndex, BounceDimension(depth, SLOT_BSDF_V)));
 }
 
 #endif

@@ -16,6 +16,7 @@
 uint2 _Resolution;
 uint _WaveStart;
 uint _RayCount;
+uint _SampleIndex;
 RWStructuredBuffer<GpuRay> _Rays;
 RWStructuredBuffer<GpuPathState> _Paths;
 RWStructuredBuffer<uint> _QueueOut;
@@ -60,6 +61,7 @@ void Generate(uint3 id : SV_DispatchThreadID)
     path.Throughput = float4(1.0f, 1.0f, 1.0f, 0.0f); // RGB mode's lanes are (r, g, b, 0)
     path.PixelIndex = pixelIndex;
     path.Flags = PATHFLAGS_ACTIVE;
+    path.SampleIndex = _SampleIndex;
     StorePath(_Paths, id.x, path);
 
     // every slot starts alive, so queue A holds the whole wave

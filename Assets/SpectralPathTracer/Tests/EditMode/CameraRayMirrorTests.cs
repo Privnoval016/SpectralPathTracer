@@ -110,6 +110,7 @@ namespace SpectralPathTracer
             shader.SetInts(ShaderIDs.ResolutionID, Width, Height);
             shader.SetInt(ShaderIDs.WaveStartID, 0);
             shader.SetInt(ShaderIDs.RayCountID, Width * Height);
+            shader.SetInt(ShaderIDs.SampleIndexID, 0);
             using GraphicsBuffer constants = TestFrameConstants.Bind(shader, new FrameConstants
             {
                 _CameraToWorld = camera.CameraToWorld,

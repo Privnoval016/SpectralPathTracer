@@ -18,7 +18,7 @@ struct GpuPathState
     uint PixelIndex;
     uint Flags;
     uint MediumId;
-    uint Reserved;
+    uint SampleIndex;
 };
 
 

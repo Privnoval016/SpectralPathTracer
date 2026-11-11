@@ -28,6 +28,6 @@ void Resolve(uint3 id : SV_DispatchThreadID)
     float3 radiance = path.Radiance.rgb;
 
     // the first sample after a reset replaces the old sum
-    float4 previous = _SampleIndex == 0u ? float4(0.0f, 0.0f, 0.0f, 0.0f) : _Accumulation[path.PixelIndex];
+    float4 previous = path.SampleIndex == 0u ? float4(0.0f, 0.0f, 0.0f, 0.0f) : _Accumulation[path.PixelIndex];
     _Accumulation[path.PixelIndex] = previous + float4(radiance, 1.0f); // w counts this pixel's own samples
 }

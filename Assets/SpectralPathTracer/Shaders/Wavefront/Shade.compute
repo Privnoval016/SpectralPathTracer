@@ -54,7 +54,7 @@ void Shade(uint3 id : SV_DispatchThreadID)
 
     if (_Depth == 0u && _Aov != AOV_NONE)
     {
-        path.Radiance.rgb = AovColor(ray, hit, surface.Normal, surface.FrontFace);
+        path.Radiance.rgb = AovColor(ray, hit, surface.Normal, surface.FrontFace, path.SampleIndex);
         Finish(path);
     }
     else if (hit.Hit == 0u)
@@ -70,12 +70,12 @@ void Shade(uint3 id : SV_DispatchThreadID)
         if (_Depth < _MaxBounces)
         {
             uint2 pixel = OutputPixel(ray.Pixel);
-            BsdfSample bsdf = SampleBsdf(surface.Material, surface.Facing, SampleBsdf2D(pixel, _Depth));
+            BsdfSample bsdf = SampleBsdf(surface.Material, surface.Facing, SampleBsdf2D(pixel, path.SampleIndex, _Depth));
             path.Throughput *= bsdf.Weight;
 
             bool continues = any(path.Throughput > 0.0f);
             if (continues && _RussianRoulette != 0u && _Depth >= 1u)
-                continues = SurvivesRoulette(path.Throughput, SampleUniform(pixel, _SampleIndex, BounceDimension(_Depth, SLOT_RUSSIAN_ROULETTE)));
+                continues = SurvivesRoulette(path.Throughput, SampleUniform(pixel, path.SampleIndex, BounceDimension(_Depth, SLOT_RUSSIAN_ROULETTE)));
 
             if (continues)
             {
