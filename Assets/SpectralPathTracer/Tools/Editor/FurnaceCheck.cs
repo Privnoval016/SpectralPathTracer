@@ -44,8 +44,40 @@ namespace SpectralPathTracer
 
 
             int n = means.Length;
-            Debug.Log($"Furnace at {size.x} by {size.y}: mean ({r / n:F5}, {g / n:F5}, {b / n:F5}), " +
-                      $"min {((Vector3)min).ToString("F5")}, max {((Vector3)max).ToString("F5")}, samples {min.w} to {max.w}");
+            var average = new Vector3((float)(r / n), (float)(g / n), (float)(b / n));
+            string numbers = $"mean {average.ToString("F5")}, min {((Vector3)min).ToString("F5")}, " +
+                             $"max {((Vector3)max).ToString("F5")}, samples {min.w} to {max.w} at {size.x} by {size.y}";
+
+            var expectation = Object.FindAnyObjectByType<FurnaceExpectation>();
+            if (expectation == null)
+            {
+                Debug.Log($"Furnace: {numbers}");
+                return;
+            }
+
+            float error = Deviation(average, expectation.Expected);
+            if (expectation.EveryPixel)
+                error = Mathf.Max(error, Deviation(min, expectation.Expected), Deviation(max, expectation.Expected));
+
+            bool passed = error <= expectation.Tolerance;
+            string verdict = $"Furnace {(passed ? "PASS" : "FAIL")}: off by {error:F5} (tolerance {expectation.Tolerance:F5}), {numbers}";
+            if (passed)
+                Debug.Log(verdict);
+            else
+                Debug.LogError(verdict); // shows up in the console's error count without reading the message
+        }
+
+        /**
+         * <summary>
+         * The largest difference between any channel and the expected value.
+         * </summary>
+         * <param name="value">The reading, one value per channel.</param>
+         * <param name="expected">The value every channel should have.</param>
+         * <returns>The worst channel's absolute error.</returns>
+         */
+        private static float Deviation(Vector3 value, float expected)
+        {
+            return Mathf.Max(Mathf.Abs(value.x - expected), Mathf.Abs(value.y - expected), Mathf.Abs(value.z - expected));
         }
     }
 }

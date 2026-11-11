@@ -2,7 +2,8 @@
     "name": "SpectralPathTracer.Tools.Editor",
     "rootNamespace": "SpectralPathTracer",
     "references": [
-        "SpectralPathTracer"
+        "SpectralPathTracer",
+        "SpectralPathTracer.Tools"
     ],
     "includePlatforms": [
         "Editor"
