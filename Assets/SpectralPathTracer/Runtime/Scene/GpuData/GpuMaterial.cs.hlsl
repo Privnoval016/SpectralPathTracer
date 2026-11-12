@@ -8,6 +8,8 @@
 // PackingRules = Exact
 struct GpuMaterial
 {
+    float4 AlbedoSpectrum;
+    float4 EmissionSpectrum;
     float3 Albedo;
     float3 Emission;
     int Type;

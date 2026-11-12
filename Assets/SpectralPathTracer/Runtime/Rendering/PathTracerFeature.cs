@@ -16,6 +16,9 @@ namespace SpectralPathTracer
         [Tooltip("Which AOV the image shows.")]
         [SerializeField] private AovSettings aovSettings;
 
+        [Tooltip("The fitted RGB to spectrum table, from Tools > Spectral Path Tracer > Build Sigmoid Table.")]
+        [SerializeField] private TextAsset sigmoidTable;
+
         #endregion
 
         #region Private Fields
@@ -47,7 +50,12 @@ namespace SpectralPathTracer
                 return;
             }
 
-            _pass = new PathTracerPass(shaders, settings, aovSettings)
+            // spectral mode renders every color black without the table, but RGB mode doesn't need it
+            if (sigmoidTable == null)
+                Debug.LogWarning("PathTracerFeature: No sigmoid table assigned, so spectral mode has no colors.");
+
+            SigmoidTable spectra = sigmoidTable != null ? SigmoidTable.Read(sigmoidTable.bytes) : null;
+            _pass = new PathTracerPass(shaders, settings, aovSettings, spectra)
             {
                 renderPassEvent = RenderPassEvent.AfterRenderingPostProcessing
             };

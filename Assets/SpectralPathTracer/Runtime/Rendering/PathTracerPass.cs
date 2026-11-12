@@ -27,11 +27,12 @@ namespace SpectralPathTracer
          * <param name="shaders">The compute shaders for each wavefront stage.</param>
          * <param name="settings">The path tracer settings.</param>
          * <param name="aovSettings">Which AOV to show, and how.</param>
+         * <param name="spectra">The table that turns RGB colors into spectra.</param>
          */
-        public PathTracerPass(PathTracerShaders shaders, PathTracerSettings settings, AovSettings aovSettings)
+        public PathTracerPass(PathTracerShaders shaders, PathTracerSettings settings, AovSettings aovSettings, SigmoidTable spectra)
         {
             _settings = settings;
-            _renderer = new PathTracerRenderer(shaders, settings, aovSettings);
+            _renderer = new PathTracerRenderer(shaders, settings, aovSettings, spectra);
 
             requiresIntermediateTexture = true;
         }

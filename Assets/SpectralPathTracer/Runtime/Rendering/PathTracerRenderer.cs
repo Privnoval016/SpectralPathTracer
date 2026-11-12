@@ -25,7 +25,7 @@ namespace SpectralPathTracer
         private readonly ArgsStage _argsStage;
         private readonly DisplayStage _displayStage;
 
-        private readonly SceneCompiler _sceneCompiler = new SceneCompiler();
+        private readonly SceneCompiler _sceneCompiler;
         private readonly AccumulationBuffer _accumulation = new AccumulationBuffer();
         private readonly FrameConstantsBuffer _constants = new FrameConstantsBuffer();
         private readonly LivePathStats _liveStats = new LivePathStats();
@@ -56,11 +56,13 @@ namespace SpectralPathTracer
          * <param name="shaders">The compute shaders for each wavefront stage.</param>
          * <param name="settings">The path tracer settings.</param>
          * <param name="aovSettings">Which AOV to show, and how.</param>
+         * <param name="spectra">The table that turns RGB colors into spectra.</param>
          */
-        public PathTracerRenderer(PathTracerShaders shaders, PathTracerSettings settings, AovSettings aovSettings)
+        public PathTracerRenderer(PathTracerShaders shaders, PathTracerSettings settings, AovSettings aovSettings, SigmoidTable spectra)
         {
             _settings = settings;
             _aovSettings = aovSettings;
+            _sceneCompiler = new SceneCompiler(spectra);
 
             _generateStage = new GenerateStage(shaders.Generate);
             _intersectStage = new IntersectStage(shaders.Intersect);
@@ -190,6 +192,10 @@ namespace SpectralPathTracer
                 _SkyZenithColor = _sceneCompiler.Sky.Zenith.linear,
                 _SkyHorizonColor = _sceneCompiler.Sky.Horizon.linear,
                 _SkyGroundColor = _sceneCompiler.Sky.Ground.linear,
+
+                _SkyZenithSpectrum = _sceneCompiler.SkyZenithSpectrum,
+                _SkyHorizonSpectrum = _sceneCompiler.SkyHorizonSpectrum,
+                _SkyGroundSpectrum = _sceneCompiler.SkyGroundSpectrum,
 
                 _MaxBounces = (uint)renderParams.MaxBounces,
                 _PixelJitter = renderParams.PixelJitter ? 1u : 0u,

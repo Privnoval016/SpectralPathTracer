@@ -26,19 +26,6 @@ typedef float4 SampledSpectrum; // typedef to preserve float4s built in operator
 
 /**
  * <summary>
- * Converts an RGB color to a sampled spectrum.
- * </summary>
- * <param name="rgb">The RGB color.</param>
- * <param name="wavelengths">The sampled wavelengths.</param>
- * <returns>The sampled spectrum.</returns>
- */
-SampledSpectrum RgbToSpectrum(float3 rgb, SampledWavelengths wavelengths)
-{
-    return float4(rgb, 0.0f); // todo
-}
-
-/**
- * <summary>
  * Converts a sampled spectrum to an RGB color.
  * </summary>
  * <param name="spectrum">The sampled spectrum.</param>

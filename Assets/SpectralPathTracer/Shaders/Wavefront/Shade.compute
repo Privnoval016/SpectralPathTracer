@@ -62,13 +62,13 @@ void Shade(uint3 id : SV_DispatchThreadID)
     }
     else if (hit.Hit == 0u)
     {
-        path.Radiance += path.Throughput * RgbToSpectrum(SkyRadiance(ray.Direction), wavelengths); // the sky is a light too
+        path.Radiance += path.Throughput * SkySpectrum(ray.Direction, wavelengths); // the sky is a light too
         Finish(path);
     }
     else
     {
         if (surface.FrontFace)
-            path.Radiance += path.Throughput * RgbToSpectrum(surface.Material.Emission, wavelengths); // lights emit from their front only
+            path.Radiance += path.Throughput * EmissionSpectrum(surface.Material, wavelengths); // lights emit from their front only
 
         if (_Depth < _MaxBounces)
         {

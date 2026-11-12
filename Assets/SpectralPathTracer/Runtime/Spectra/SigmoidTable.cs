@@ -1,4 +1,4 @@
-using System.IO;
+using System;
 using UnityEngine;
 
 namespace SpectralPathTracer
@@ -30,16 +30,16 @@ namespace SpectralPathTracer
          */
         public static SigmoidTable Read(byte[] bytes)
         {
-            using var reader = new BinaryReader(new MemoryStream(bytes));
-            int resolution = reader.ReadInt32();
-
+            int resolution = BitConverter.ToInt32(bytes, 0);
             var brightness = new float[resolution];
-            for (int k = 0; k < resolution; k++)
-                brightness[k] = reader.ReadSingle();
-
             var coefficients = new float[3 * resolution * resolution * resolution * 3];
-            for (int n = 0; n < coefficients.Length; n++)
-                coefficients[n] = reader.ReadSingle();
+
+            // the file is the resolution, then the brightness steps, then the coefficients, all 4 byte values
+            int offset = sizeof(int);
+            Buffer.BlockCopy(bytes, offset, brightness, 0, brightness.Length * sizeof(float));
+
+            offset += brightness.Length * sizeof(float);
+            Buffer.BlockCopy(bytes, offset, coefficients, 0, coefficients.Length * sizeof(float));
 
 
             return new SigmoidTable(resolution, brightness, coefficients);
@@ -87,6 +87,39 @@ namespace SpectralPathTracer
                 Vector3.Lerp(Read(Index(largest, k + 1, j + 1, i)), Read(Index(largest, k + 1, j + 1, i + 1)), tx), ty);
 
             return Vector3.Lerp(front, back, tz); // so basically we just did a trilinear interpolation where the largest channel is used for brightness and the other two are ratios of it hoo ray
+        }
+
+        /**
+         * <summary>
+         * The coefficients of a reflectance, which stays between 0 and 1.
+         * </summary>
+         * <param name="rgb">The linear sRGB albedo.</param>
+         * <returns>c0, c1 and c2 for nm in xyz, and 1 in w.</returns>
+         */
+        public Vector4 Reflectance(Vector3 rgb)
+        {
+            Vector3 coefficients = Lookup(rgb);
+            return new Vector4(coefficients.x, coefficients.y, coefficients.z, 1f);
+        }
+
+        /**
+         * <summary>
+         * The coefficients and scale of an unbounded spectrum, such as a light's color times its strength.
+         * </summary>
+         * <param name="rgb">The linear sRGB color, which can exceed 1.</param>
+         * <returns>c0, c1 and c2 for nm in xyz, and the scale to multiply the sigmoid by in w.</returns>
+         */
+        public Vector4 Unbounded(Vector3 rgb)
+        {
+            // fit the color at half brightness, so its spectrum never has to reach the sigmoid's ceiling
+            float scale = 2f * Mathf.Max(rgb.x, Mathf.Max(rgb.y, rgb.z));
+            if (scale <= 0f)
+                return Vector4.zero;
+
+            Vector3 coefficients = Lookup(rgb / scale);
+
+
+            return new Vector4(coefficients.x, coefficients.y, coefficients.z, scale);
         }
 
         /**

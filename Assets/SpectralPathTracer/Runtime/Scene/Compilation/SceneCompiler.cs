@@ -33,6 +33,8 @@ namespace SpectralPathTracer
 
         private bool _reportedMultipleSkies;
 
+        private readonly SigmoidTable _spectra; // null when no table is assigned, which leaves every spectrum black
+
         #endregion
 
         #region Properties
@@ -40,7 +42,22 @@ namespace SpectralPathTracer
         public int ObjectCount { get; private set; }
         public SkyColors Sky { get; private set; }
 
+        public Vector4 SkyZenithSpectrum { get; private set; }
+        public Vector4 SkyHorizonSpectrum { get; private set; }
+        public Vector4 SkyGroundSpectrum { get; private set; }
+
         #endregion
+
+        /**
+         * <summary>
+         * Initializes a new instance of the <see cref="SceneCompiler"/> class.
+         * </summary>
+         * <param name="spectra">The table that turns RGB colors into spectra.</param>
+         */
+        public SceneCompiler(SigmoidTable spectra)
+        {
+            _spectra = spectra;
+        }
 
         /**
          * <summary>
@@ -58,6 +75,14 @@ namespace SpectralPathTracer
             // sky colors change without a version bump, so compare them directly
             changed = sky.Zenith != Sky.Zenith || sky.Horizon != Sky.Horizon || sky.Ground != Sky.Ground;
             Sky = sky;
+
+            // the sky is a light, so its colors become unbounded spectra once per change
+            if (changed)
+            {
+                SkyZenithSpectrum = Unbounded(sky.Zenith.linear);
+                SkyHorizonSpectrum = Unbounded(sky.Horizon.linear);
+                SkyGroundSpectrum = Unbounded(sky.Ground.linear);
+            }
 
             if (HasChanged())
             {
@@ -91,6 +116,11 @@ namespace SpectralPathTracer
         }
 
         #region Helpers
+
+        private Vector4 Unbounded(Color color)
+        {
+            return _spectra?.Unbounded(new Vector3(color.r, color.g, color.b)) ?? Vector4.zero;
+        }
 
         private bool HasChanged()
         {
@@ -167,10 +197,15 @@ namespace SpectralPathTracer
         {
             Color linearAlbedo = albedo.linear;
             Color emission = emissionColor.linear * emissionStrength;
+            var albedoRgb = new Vector3(linearAlbedo.r, linearAlbedo.g, linearAlbedo.b);
+            var emissionRgb = new Vector3(emission.r, emission.g, emission.b);
+
             _materialData.Add(new GpuMaterial
             {
-                Albedo = new Vector3(linearAlbedo.r, linearAlbedo.g, linearAlbedo.b),
-                Emission = new Vector3(emission.r, emission.g, emission.b),
+                AlbedoSpectrum = _spectra?.Reflectance(albedoRgb) ?? Vector4.zero,
+                EmissionSpectrum = Unbounded(emission),
+                Albedo = albedoRgb,
+                Emission = emissionRgb,
                 Type = (int)MaterialType.Lambert
             });
             return _materialData.Count - 1;

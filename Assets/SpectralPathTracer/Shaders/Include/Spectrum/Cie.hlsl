@@ -1,6 +1,6 @@
 /**
  * <summary>
- * The CIE 1931 matching functions and the conversion from XYZ to linear sRGB.
+ * The CIE 1931 matching functions, the D65 illuminant and the conversion from XYZ to linear sRGB.
  * </summary>
  */
 
@@ -38,6 +38,28 @@ float3 MatchingFunctions(float lambda)
 
 
     return xyz;
+}
+
+/**
+ * <summary>
+ * Samples D65's power at a wavelength, interpolating between the 5 nm rows.
+ * </summary>
+ * <param name="lambda">The wavelength in nm.</param>
+ * <returns>The relative power, or zero outside 300 to 830 nm.</returns>
+ */
+float D65At(float lambda)
+{
+    float position = (lambda - CIE_D65_FIRST) / CIE_D65_STEP;
+    float power = 0.0f;
+
+    if (position >= 0.0f && position <= (float)(CIE_D65_COUNT - 1u))
+    {
+        uint row = min((uint)position, CIE_D65_COUNT - 2u); // the last wavelength interpolates from the row before
+        power = lerp(CIE_D65[row], CIE_D65[row + 1u], position - row);
+    }
+
+
+    return power;
 }
 
 /**

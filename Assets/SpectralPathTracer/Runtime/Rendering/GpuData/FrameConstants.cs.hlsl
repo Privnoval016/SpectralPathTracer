@@ -25,6 +25,9 @@ CBUFFER_START(FrameConstants)
     uint _ShowGrayRamp;
     uint _ShowSpectrumStrip;
     uint _Padding1;
+    float4 _SkyZenithSpectrum;
+    float4 _SkyHorizonSpectrum;
+    float4 _SkyGroundSpectrum;
 CBUFFER_END
 
 

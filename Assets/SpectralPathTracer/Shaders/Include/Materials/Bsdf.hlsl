@@ -9,7 +9,7 @@
 
 #include "../Common.hlsl"
 #include "../GpuData.hlsl"
-#include "../Spectrum/SampledSpectrum.hlsl"
+#include "../Spectrum/SigmoidSpectrum.hlsl"
 #include "../Sampling/Sampling.hlsl"
 
 struct BsdfSample
@@ -35,7 +35,7 @@ BsdfSample SampleBsdf(GpuMaterial material, float3 facing, SampledWavelengths wa
 
     BsdfSample bsdf;
     bsdf.Direction = LocalToWorld(local, facing);
-    bsdf.Weight = RgbToSpectrum(material.Albedo, wavelengths); // f cos / pdf for a Lambertian surface is the albedo
+    bsdf.Weight = ReflectanceSpectrum(material, wavelengths); // f cos / pdf for a Lambertian surface is the albedo
     bsdf.Pdf = CosineHemispherePdf(local.z);
     return bsdf;
 }
@@ -53,7 +53,7 @@ BsdfSample SampleBsdf(GpuMaterial material, float3 facing, SampledWavelengths wa
 SampledSpectrum EvalBsdf(GpuMaterial material, float3 facing, SampledWavelengths wavelengths, float3 direction)
 {
     // light from below the surface never reaches the front
-    return dot(facing, direction) > 0.0f ? RgbToSpectrum(material.Albedo / PI, wavelengths) : (SampledSpectrum)0;
+    return dot(facing, direction) > 0.0f ? ReflectanceSpectrum(material, wavelengths) / PI : (SampledSpectrum)0;
 }
 
 /**
