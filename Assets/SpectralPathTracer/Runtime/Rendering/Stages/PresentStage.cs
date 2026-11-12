@@ -44,8 +44,6 @@ namespace SpectralPathTracer
             });
         }
 
-        #region Helpers
-
         /**
          * <summary>
          * The largest rectangle with the image's aspect ratio that fits inside the target, centered.
@@ -54,14 +52,12 @@ namespace SpectralPathTracer
          * <param name="target">The target's size.</param>
          * <returns>The centered rectangle.</returns>
          */
-        private static Rect FitInside(Vector2Int image, Vector2Int target)
+        public static Rect FitInside(Vector2Int image, Vector2Int target)
         {
             float scale = Mathf.Min((float)target.x / image.x, (float)target.y / image.y);
             float width = Mathf.Round(image.x * scale);
             float height = Mathf.Round(image.y * scale);
             return new Rect(Mathf.Floor((target.x - width) * 0.5f), Mathf.Floor((target.y - height) * 0.5f), width, height);
         }
-
-        #endregion
     }
 }

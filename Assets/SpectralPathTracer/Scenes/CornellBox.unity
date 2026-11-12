@@ -259,6 +259,7 @@ GameObject:
   - component: {fileID: 1156157385}
   - component: {fileID: 1156157388}
   - component: {fileID: 1156157389}
+  - component: {fileID: 1156157390}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -401,6 +402,54 @@ MonoBehaviour:
   <BoostMultiplier>k__BackingField: 4
   <LookSensitivity>k__BackingField: 0.15
   <StickLookSpeed>k__BackingField: 120
+--- !u!114 &1156157390
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1156157384}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a8882a30ea92a4f5885d3f55db17a8c5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: SpectralPathTracer.Tools::SpectralPathTracer.SplitDivider
+  <Settings>k__BackingField: {fileID: 11400000, guid: 20b49b96c96244a89ac6e3c4dde2d26b, type: 2}
+  <Drag>k__BackingField:
+    m_Name: Drag
+    m_Type: 1
+    m_ExpectedControlType: 
+    m_Id: 5e9fc299-0df7-4374-b0f8-c1bb3a35e7cd
+    m_Processors: 
+    m_Interactions: 
+    m_SingletonActionBindings:
+    - m_Name: 
+      m_Id: 3bebe481-c897-423d-a1a5-42b3fdd134a0
+      m_Path: <Mouse>/leftButton
+      m_Interactions: 
+      m_Processors: 
+      m_Groups: 
+      m_Action: Drag
+      m_Flags: 0
+    m_Flags: 0
+  <Point>k__BackingField:
+    m_Name: Point
+    m_Type: 0
+    m_ExpectedControlType: 
+    m_Id: f7d1f28f-cd66-46ce-bf95-ba108424a59d
+    m_Processors: 
+    m_Interactions: 
+    m_SingletonActionBindings:
+    - m_Name: 
+      m_Id: 232b5524-b5bf-4347-b40a-4a114da98753
+      m_Path: <Pointer>/position
+      m_Interactions: 
+      m_Processors: 
+      m_Groups: 
+      m_Action: Point
+      m_Flags: 0
+    m_Flags: 0
+  <GrabDistance>k__BackingField: 12
 --- !u!1 &2036577448
 GameObject:
   m_ObjectHideFlags: 0
