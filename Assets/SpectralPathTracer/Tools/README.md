@@ -62,7 +62,10 @@ the mean, min and max radiance and the sample counts. Run both after every check
 | `Furnace` | albedo 1 sphere in a uniform sky of 1 | exactly 1 | every pixel, tolerance $10^{-4}$ |
 | `FurnacePlanes` | two facing planes, emission 1, linear albedo 0.5, black sky | $2 - 2^{-16} = 1.99998$ at 16 bounces | the mean, tolerance $2 \times 10^{-3}$ |
 
-The sphere has no noise at all (every sample is exactly 1), so a single sample is enough and any deviation is a bug.
+In spectral mode each sample carries one wavelength, so single pixels are noisy; the check then judges only the mean,
+against each expectation's spectral tolerance (0.01).
+
+In RGB mode the sphere has no noise at all (every sample is exactly 1), so a single sample is enough and any deviation is a bug.
 It can't see where samples go, only what they weigh, and its paths never reach Russian roulette; the planes cover
 multiple bounces and roulette. Picker colors are sRGB and get converted to linear, so a linear albedo of 0.5 is
 0.735357 in the picker.
@@ -77,3 +80,7 @@ Seven lines, each PASS or an error on FAIL. It needs no scene.
 | Flat light's chromaticity $x$, $y$ | $1/3$, $1/3$ | unequal curve areas |
 | D65 at $Y = 1$ through the matrix | sRGB (1, 1, 1) | a wrong or transposed matrix |
 | Flat $Y$ from 65,536 uniform wavelengths, over the $\bar y$ integral | 1, within 0.02 | a missing $1/p$ (it would read about 0.002) |
+| Sigmoid fits of gray, the Cornell walls and the sRGB primaries | delta E under 0.1, and the color rebuilt from the nm coefficients | a broken fit or coefficient conversion |
+| 1,000 random colors through the sigmoid table | worst delta E under 1 | a broken table or lookup |
+
+It also notes, without judging, how far the measured Cornell walls are from the hand-picked Cornell colors.

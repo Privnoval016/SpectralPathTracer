@@ -17,12 +17,12 @@ flowchart TD
     end
 
     subgraph WAVE["GPU, for each planned wave from the cursor, up to 2^18 paths each"]
-        gen["Generate<br/>camera ray, path state and wavelengths per slot,<br/>queue A = every slot"]
+        gen["Generate<br/>camera ray, path state and wavelength per slot,<br/>queue A = every slot"]
         isect["Intersect<br/>nearest hit for each queued path"]
-        shade["Shade<br/>add light, sample the bounce,<br/>Russian roulette from depth 1,<br/>append survivors to the other queue"]
+        shade["Shade<br/>add light, sample the bounce,<br/>colors at the path's wavelengths in spectral mode,<br/>Russian roulette from depth 1,<br/>append survivors to the other queue"]
         more{"another bounce?"}
         args["Args<br/>survivor count becomes the next dispatch size<br/>and is added to the live path stats"]
-        resolve["Resolve<br/>turn each path's lanes into RGB<br/>and add it to its pixel's sum"]
+        resolve["Resolve<br/>turn each path's lanes into a color<br/>(XYZ in spectral mode, RGB otherwise)<br/>and add it to its pixel's sum"]
         gen --> isect --> shade --> more
         more -- yes --> args --> isect
         more -- no --> resolve
@@ -33,7 +33,7 @@ flowchart TD
     resolve --> readback["Read stats<br/>async readback of live paths per depth"]
     readback --> display
     decide -- no --> display
-    display["Display<br/>sum / samples, exposure, clamp<br/>(or the gray ramp or spectrum strip)"] --> capture["Captures, only when a tool asked<br/>async readback of the display (to sRGB)<br/>or of the sums (float means)"]
+    display["Display<br/>sum / samples, XYZ to sRGB in spectral mode,<br/>exposure, clamp<br/>(or the gray ramp or spectrum strip)"] --> capture["Captures, only when a tool asked<br/>async readback of the display (to sRGB)<br/>or of the sums (float means)"]
     capture --> present["Present<br/>letterboxed blit to the camera"]
 ```
 
@@ -70,13 +70,13 @@ flowchart TD
   `PathTracerOverrides` (target samples, frame budget, a restart request), ask `DisplayCapture` for the next
   displayed frame, or ask `AccumulationCapture` for each pixel's mean radiance as floats. Movie mode and the furnace
   check in `Tools/` are built on these.
-- **Spectrum.** A path carries a `SampledSpectrum`, four lanes in a `float4`: (r, g, b, 0) in RGB mode, four
-  wavelengths in spectral mode. Its `SampledWavelengths` are chosen once in Generate and only read afterwards, and the
-  lane bits in its flags mark which lanes still carry light; Resolve divides by their average so terminated lanes are
-  made up for. Generate, Shade and Resolve compile an RGB and a `SPECTRAL` variant, and each pass sets the keyword
-  both ways on its own command buffer. Until the spectral math arrives the conversions pass colors through, so both
-  variants render the same image. The CIE 1931 matching functions and the XYZ to sRGB matrix live in `Cie.hlsl`,
-  generated from the C# tables in `Runtime/Spectra`, and Display's spectrum strip draws each wavelength with them.
+- **Spectrum.** A path carries a `SampledSpectrum`, four lanes in a `float4`: (r, g, b, 0) in RGB mode, wavelengths
+  in spectral mode, where only lane 0 is live until hero wavelengths (cp-34). Its `SampledWavelengths` are drawn once in
+  Generate and only read afterwards, and the lane bits in its flags mark which lanes still carry light; Resolve divides
+  by their average so terminated lanes are made up for. Generate, Shade and Resolve compile an RGB and a `SPECTRAL`
+  variant, and each pass sets the keyword both ways on its own command buffer. In spectral mode Shade evaluates every
+  material, light and the sky at the path's wavelength, Resolve accumulates XYZ, and Display converts the average to
+  sRGB. `Runtime/Spectra/README.md` diagrams the whole color pipeline.
 - **Frame constants.** Values that hold for the whole frame travel in one constant buffer, `FrameConstants`, uploaded
   once and read through `GpuData.hlsl`. Only per-dispatch values like the depth and queue offsets stay as
   separate uniforms.
