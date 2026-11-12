@@ -16,13 +16,13 @@ flowchart TD
         decide -- yes --> plan
     end
 
-    subgraph WAVE["GPU, for each planned wave from the cursor, up to 2^18 paths each"]
+    subgraph WAVE["GPU, for each planned wave from the cursor, up to 2^18 paths each<br/>(twice in split screen: RGB, then spectral)"]
         gen["Generate<br/>camera ray, path state and wavelength per slot,<br/>queue A = every slot"]
         isect["Intersect<br/>nearest hit for each queued path"]
         shade["Shade<br/>add light, sample the bounce,<br/>colors at the path's wavelengths in spectral mode,<br/>Russian roulette from depth 1,<br/>append survivors to the other queue"]
         more{"another bounce?"}
         args["Args<br/>survivor count becomes the next dispatch size<br/>and is added to the live path stats"]
-        resolve["Resolve<br/>turn each path's lanes into a color<br/>(XYZ in spectral mode, RGB otherwise)<br/>and add it to its pixel's sum"]
+        resolve["Resolve<br/>turn each path's lanes into a color<br/>(XYZ in spectral mode, RGB otherwise)<br/>and add it to its pixel's sum, in that mode's buffer"]
         gen --> isect --> shade --> more
         more -- yes --> args --> isect
         more -- no --> resolve
@@ -33,7 +33,7 @@ flowchart TD
     resolve --> readback["Read stats<br/>async readback of live paths per depth"]
     readback --> display
     decide -- no --> display
-    display["Display<br/>sum / samples, XYZ to sRGB in spectral mode,<br/>exposure, clamp<br/>(or the gray ramp or spectrum strip)"] --> capture["Captures, only when a tool asked<br/>async readback of the display (to sRGB)<br/>or of the sums (float means)"]
+    display["Display<br/>pick the RGB or spectral image per pixel in split screen,<br/>sum / samples, XYZ to sRGB for spectral,<br/>exposure, clamp, divider line<br/>(or the gray ramp or spectrum strip)"] --> capture["Captures, only when a tool asked<br/>async readback of the display (to sRGB)<br/>or of the sums (float means)"]
     capture --> present["Present<br/>letterboxed blit to the camera"]
 ```
 
@@ -77,6 +77,10 @@ flowchart TD
   variant, and each pass sets the keyword both ways on its own command buffer. In spectral mode Shade evaluates every
   material, light and the sky at the path's wavelength, Resolve accumulates XYZ, and Display converts the average to
   sRGB. `Runtime/Spectra/README.md` diagrams the whole color pipeline.
+- **Split screen.** Every wave runs twice on the same random numbers, once per color mode, into two accumulation
+  buffers; `FrameContext.InMode` tells each pass which keyword to set. Display shows RGB left of the divider and spectral
+  right of it, so the divider can move across converged images without restarting anything, and each half matches its
+  single-mode render pixel for pixel. The second buffer only exists while split screen is on.
 - **Frame constants.** Values that hold for the whole frame travel in one constant buffer, `FrameConstants`, uploaded
   once and read through `GpuData.hlsl`. Only per-dispatch values like the depth and queue offsets stay as
   separate uniforms.

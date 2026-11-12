@@ -90,6 +90,8 @@ HLSL include. Both read the C# tables in `Cie`, so the CPU and the GPU use the s
   come out sRGB (1, 1, 1). The furnaces check this in both modes.
 - The sums in spectral mode are XYZ and stay signed in sRGB terms: a single wavelength is outside the sRGB gamut, so
   only the average over many samples is a displayable color. Only Display clamps.
+- In split screen both paths above run every wave: the RGB sums go to the first buffer, the XYZ sums to the second, and
+  Display converts only the spectral side.
 - AOVs are data, not light. Resolve accumulates them as they are, and Display skips the XYZ conversion for them.
 - `Cie` (C#) is the single source of the CIE data. Regenerate `CieTables.hlsl` with Tools > Spectral Path Tracer >
   Generate CIE Shader Table after changing it, and rebuild the sigmoid table with Build Sigmoid Table after changing

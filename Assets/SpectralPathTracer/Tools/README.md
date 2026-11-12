@@ -8,6 +8,9 @@ accumulation has got, `PathTracerOverrides` to override the target, the budget o
 - `FlyCamera` flies the camera in Play Mode (WASD, Q and E, look while Space or the right mouse button is held).
 - The "Follow Scene View" overlay makes the Main Camera copy the Scene view in Edit Mode.
 - `MovieMode` renders a Timeline frame by frame, each to a fixed sample count, and saves PNGs.
+- `SplitDivider` drags the split screen divider in Play Mode: press the left button within a few pixels of the line and
+  drag. It maps the cursor through the same letterbox as Present (`PresentStage.FitInside`), so the line stays under
+  it, and sets `PathTracerOverrides.SplitPosition`, which clears when the component is disabled or Play Mode ends.
 - Tools > Spectral Path Tracer > Furnace Check reads the accumulated radiance back as floats and judges it against
   the scene's `FurnaceExpectation`.
 - Tools > Spectral Path Tracer > Spectrum Check proves the CIE tables, the XYZ to sRGB matrix and the $1/p$ of
