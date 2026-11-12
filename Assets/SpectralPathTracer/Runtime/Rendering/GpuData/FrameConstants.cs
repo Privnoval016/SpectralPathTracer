@@ -37,7 +37,7 @@ namespace SpectralPathTracer
         public float _ExposureScale; // 160
         public uint _ShowGrayRamp; // 164
         public uint _ShowSpectrumStrip; // 168
-        public uint _Padding1; // 172, 
+        public uint _AccumulatesXyz; // 172
 
         // the same sky as sigmoid coefficients in xyz and a scale in w, for spectral mode
         public Vector4 _SkyZenithSpectrum; // 176 to 191

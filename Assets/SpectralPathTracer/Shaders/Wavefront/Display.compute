@@ -45,6 +45,10 @@ void Display(uint3 id : SV_DispatchThreadID)
 
     float4 sum = _Accumulation[id.x + id.y * _Resolution.x];
     float3 color = sum.w > 0.0f ? sum.rgb / sum.w : float3(0.0f, 0.0f, 0.0f); // the buffer holds sums, so divide by the count
+
+    // spectral mode sums XYZ, which becomes screen color only after averaging
+    if (_AccumulatesXyz != 0u)
+        color = XyzToLinearSrgb(color);
     if (_ShowGrayRamp != 0u)
     {
         color = ((id.x + 0.5f) / _Resolution.x).xxx; // linear ramp

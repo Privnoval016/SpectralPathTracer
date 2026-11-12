@@ -29,11 +29,15 @@ void Resolve(uint3 id : SV_DispatchThreadID)
     GpuPathState path = LoadPath(_Paths, id.x);
     SampledWavelengths wavelengths = LoadWavelengths(path);
 
-    // lanes that ended early count as zero, so the survivors are scaled up to stand in for them
-    SampledSpectrum radiance = path.Radiance / AverageValue(LaneMask(path.Flags));
-    float3 rgb = SpectrumToRgb(radiance, wavelengths);
+    float3 color = path.Radiance.rgb; // aovs are data, written straight into the first three lanes
+    if (_Aov == AOV_NONE)
+    {
+        // lanes that ended early count as zero, so the survivors are scaled up to stand in for them
+        SampledSpectrum radiance = path.Radiance / AverageValue(LaneMask(path.Flags));
+        color = SpectrumToColor(radiance, wavelengths);
+    }
 
     // the first sample after a reset replaces the old sum
     float4 previous = path.SampleIndex == 0u ? float4(0.0f, 0.0f, 0.0f, 0.0f) : _Accumulation[path.PixelIndex];
-    _Accumulation[path.PixelIndex] = previous + float4(rgb, 1.0f); // w counts this pixel's own samples
+    _Accumulation[path.PixelIndex] = previous + float4(color, 1.0f); // w counts this pixel's own samples
 }

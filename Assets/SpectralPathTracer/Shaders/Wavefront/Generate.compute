@@ -64,7 +64,7 @@ void Generate(uint3 id : SV_DispatchThreadID)
     path.PixelIndex = pixelIndex;
     path.Flags = PATHFLAGS_ACTIVE | ALL_LANES;
     path.SampleIndex = _SampleIndex;
-    StoreWavelengths(path, SampleWavelengths());
+    StoreWavelengths(path, SampleWavelengths(SampleUniform(OutputPixel(pixel), _SampleIndex, BounceDimension(0u, SLOT_WAVELENGTH))));
     StorePath(_Paths, id.x, path);
 
     // every slot starts alive, so queue A holds the whole wave

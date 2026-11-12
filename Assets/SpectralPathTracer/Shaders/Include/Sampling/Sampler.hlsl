@@ -24,6 +24,7 @@ static const uint DIMENSION_STREAM_SHIFT = 24u;
 static const uint SLOT_BSDF_U = 0u;
 static const uint SLOT_BSDF_V = 1u;
 static const uint SLOT_RUSSIAN_ROULETTE = 2u;
+static const uint SLOT_WAVELENGTH = 3u; // drawn once per sample, so only depth 0 uses it
 
 uint BounceDimension(uint depth, uint slot)
 {

@@ -29,17 +29,27 @@ namespace SpectralPathTracer
 
         private static void Report(Color[] means, Vector2Int size)
         {
+            bool spectral = IsSpectral();
+
             Vector4 min = Vector4.positiveInfinity;
             Vector4 max = Vector4.negativeInfinity;
             double r = 0, g = 0, b = 0; // half a million floats summed as floats would drift
 
             foreach (Color mean in means)
             {
-                min = Vector4.Min(min, mean);
-                max = Vector4.Max(max, mean);
-                r += mean.r;
-                g += mean.g;
-                b += mean.b;
+                // spectral mode accumulates XYZ, so compare in the same linear sRGB as RGB mode
+                Vector4 color = mean;
+                if (spectral)
+                {
+                    Vector3 rgb = Cie.XyzToLinearSrgb(new Vector3(mean.r, mean.g, mean.b));
+                    color = new Vector4(rgb.x, rgb.y, rgb.z, mean.a);
+                }
+
+                min = Vector4.Min(min, color);
+                max = Vector4.Max(max, color);
+                r += color.x;
+                g += color.y;
+                b += color.z;
             }
 
 
@@ -55,16 +65,27 @@ namespace SpectralPathTracer
                 return;
             }
 
+            // one wavelength per sample leaves single pixels noisy, so spectral mode only judges the mean
+            float tolerance = spectral ? expectation.SpectralTolerance : expectation.Tolerance;
             float error = Deviation(average, expectation.Expected);
-            if (expectation.EveryPixel)
+            if (expectation.EveryPixel && !spectral)
                 error = Mathf.Max(error, Deviation(min, expectation.Expected), Deviation(max, expectation.Expected));
 
-            bool passed = error <= expectation.Tolerance;
-            string verdict = $"Furnace {(passed ? "PASS" : "FAIL")}: off by {error:F5} (tolerance {expectation.Tolerance:F5}), {numbers}";
+            bool passed = error <= tolerance;
+            string verdict = $"Furnace {(passed ? "PASS" : "FAIL")} ({(spectral ? "spectral, mean only" : "RGB")}): off by {error:F5} (tolerance {tolerance:F5}), {numbers}";
             if (passed)
                 Debug.Log(verdict);
             else
                 Debug.LogError(verdict); // shows up in the console's error count without reading the message
+        }
+
+        private static bool IsSpectral()
+        {
+            string[] guids = AssetDatabase.FindAssets("t:PathTracerSettings");
+            var settings = guids.Length > 0 ? AssetDatabase.LoadAssetAtPath<PathTracerSettings>(AssetDatabase.GUIDToAssetPath(guids[0])) : null;
+
+
+            return settings != null && settings.Spectral;
         }
 
         /**

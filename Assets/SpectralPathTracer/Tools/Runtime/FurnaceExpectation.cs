@@ -17,6 +17,10 @@ namespace SpectralPathTracer
         [field: Tooltip("Whether every pixel must match, for setups without noise, or only the mean.")]
         [field: SerializeField] public bool EveryPixel { get; private set; } = true;
 
+        [field: Tooltip("How far the mean may stray in spectral mode, where one wavelength per sample leaves every pixel noisy.")]
+        [field: Min(0f)]
+        [field: SerializeField] public float SpectralTolerance { get; private set; } = 0.01f;
+
         #endregion
     }
 }

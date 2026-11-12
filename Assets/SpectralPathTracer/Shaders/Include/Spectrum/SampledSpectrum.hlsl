@@ -9,11 +9,12 @@
 
 #include "SampledWavelengths.hlsl"
 #include "../GpuData.hlsl"
+#include "Cie.hlsl"
 
 #ifdef SPECTRAL // render in spectral mode
 
 #define ACTIVE_LANES 4
-#define ALL_LANES (PATHFLAGS_LANE0 | PATHFLAGS_LANE1 | PATHFLAGS_LANE2 | PATHFLAGS_LANE3)
+#define ALL_LANES (PATHFLAGS_LANE0) // one wavelength for now
 
 #else // render in RGB mode
 
@@ -26,15 +27,27 @@ typedef float4 SampledSpectrum; // typedef to preserve float4s built in operator
 
 /**
  * <summary>
- * Converts a sampled spectrum to an RGB color.
+ * Converts a sampled spectrum to the color the accumulation buffer holds: XYZ in spectral mode, linear sRGB in RGB mode.
  * </summary>
  * <param name="spectrum">The sampled spectrum.</param>
  * <param name="wavelengths">The sampled wavelengths.</param>
- * <returns>The RGB color.</returns>
+ * <returns>The color to accumulate.</returns>
  */
-float3 SpectrumToRgb(SampledSpectrum spectrum, SampledWavelengths wavelengths)
+float3 SpectrumToColor(SampledSpectrum spectrum, SampledWavelengths wavelengths)
 {
-    return spectrum.rgb; // todo
+#ifdef SPECTRAL
+    // each lane estimates XYZ as L cmf / p, and their average over the y-bar integral is the sample's XYZ
+    float3 xyz = 0.0f;
+    for (uint lane = 0u; lane < 4u; lane++)
+        xyz += spectrum[lane] * MatchingFunctions(wavelengths.Lambda[lane]) / wavelengths.Pdf[lane];
+
+    float3 color = xyz / (ACTIVE_LANES * CIE_Y_INTEGRAL);
+#else
+    float3 color = spectrum.rgb;
+#endif
+
+
+    return color;
 }
 
 

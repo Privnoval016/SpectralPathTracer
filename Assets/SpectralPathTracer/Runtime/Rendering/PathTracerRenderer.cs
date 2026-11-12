@@ -208,7 +208,8 @@ namespace SpectralPathTracer
                 _ExposureScale = Mathf.Pow(2f, _settings.Exposure),
                 _ApplyExposure = renderParams.Aov == Aov.None ? 1u : 0u, // AOVs are data with fixed encodings so they skip exposure
                 _ShowGrayRamp = _settings.ShowGrayRamp ? 1u : 0u,
-                _ShowSpectrumStrip = _settings.ShowSpectrumStrip ? 1u : 0u
+                _ShowSpectrumStrip = _settings.ShowSpectrumStrip ? 1u : 0u,
+                _AccumulatesXyz = renderParams.Spectral && renderParams.Aov == Aov.None ? 1u : 0u // aovs stay as they are
             };
         }
 

@@ -8,6 +8,7 @@
 #define SPT_SAMPLED_WAVELENGTHS_INCLUDED
 
 #include "../GpuData.hlsl"
+#include "Cie.hlsl"
 
 struct SampledWavelengths
 {
@@ -19,15 +20,24 @@ struct SampledWavelengths
  * <summary>
  * Samples a set of wavelengths for a path.
  * </summary>
+ * <param name="u">A uniform random number in [0, 1).</param>
  * <returns>The sampled wavelengths.</returns>
  */
-SampledWavelengths SampleWavelengths()
+SampledWavelengths SampleWavelengths(float u)
 {
     SampledWavelengths wavelengths;
+
+#ifdef SPECTRAL
+    // one wavelength, uniform over the matching functions' range (other lanes later)
+    float range = CIE_SAMPLE_COUNT - 1.0f;
+    wavelengths.Lambda = float4(CIE_FIRST_WAVELENGTH + u * range, 0.0f, 0.0f, 0.0f);
+    wavelengths.Pdf = float4(1.0f / range, 1.0f, 1.0f, 1.0f); // the masked lanes never divide by zero
+#else
     wavelengths.Lambda = 0.0f;
     wavelengths.Pdf = 1.0f;
+#endif
 
-    return wavelengths; // placeholder
+    return wavelengths;
 }
 
 /**
