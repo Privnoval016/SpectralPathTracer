@@ -110,7 +110,7 @@ each, in one buffer, so every lookup costs the same. Raw tables would need a sea
 5 nm flattens features narrower than about 10 nm, which is why sodium lines (cp-31) will be analytic.
 
 **[Decide] What does RGB mode show for a measured material?** The spectrum's own color, so both modes show the same
-material and differences are pure light transport. The picker color would have been ΔE 16 off for the green wall.
+material and differences are pure light transport. The picker color would have been delta E 16 off for the green wall.
 
 ### Asked along the way
 
