@@ -86,7 +86,7 @@ namespace SpectralPathTracer
             passData.Groups = GroupCount(count, GroupSizeX);
             passData.Constants = frame.Constants;
             passData.SpectralKeyword = SpectralKeyword;
-            passData.Spectral = frame.Params.Spectral;
+            passData.Spectral = frame.Spectral;
 
             builder.UseBuffer(rays, AccessFlags.Write);
             builder.UseBuffer(paths, AccessFlags.Write);

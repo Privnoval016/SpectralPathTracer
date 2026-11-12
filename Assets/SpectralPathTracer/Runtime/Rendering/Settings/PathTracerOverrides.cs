@@ -12,6 +12,7 @@ namespace SpectralPathTracer
 
         public static int? TargetSamples { get; set; }
         public static float? FrameBudgetMs { get; set; }
+        public static float? SplitPosition { get; set; }
 
         #endregion
 
@@ -19,6 +20,7 @@ namespace SpectralPathTracer
         {
             TargetSamples = null;
             FrameBudgetMs = null;
+            SplitPosition = null;
         }
 
         /**

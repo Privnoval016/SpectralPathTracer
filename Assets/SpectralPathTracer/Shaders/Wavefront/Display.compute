@@ -11,6 +11,7 @@
 
 uint2 _Resolution;
 StructuredBuffer<float4> _Accumulation;
+StructuredBuffer<float4> _SpectralAccumulation; // the second image in split screen
 RWTexture2D<float4> _Display;
 
 /**
@@ -43,11 +44,22 @@ void Display(uint3 id : SV_DispatchThreadID)
     if (any(id.xy >= _Resolution))
         return;
 
-    float4 sum = _Accumulation[id.x + id.y * _Resolution.x];
+    uint index = id.x + id.y * _Resolution.x;
+    float column = (id.x + 0.5f) / _Resolution.x;
+    float4 sum = _Accumulation[index];
+    bool xyz = _AccumulatesXyz != 0u;
+
+    // right of the divider shows the spectral image, whose sums are XYZ unless an aov is showing
+    if (_SplitScreen != 0u && column >= _SplitPosition)
+    {
+        sum = _SpectralAccumulation[index];
+        xyz = _Aov == AOV_NONE;
+    }
+
     float3 color = sum.w > 0.0f ? sum.rgb / sum.w : float3(0.0f, 0.0f, 0.0f); // the buffer holds sums, so divide by the count
 
     // spectral mode sums XYZ, which becomes screen color only after averaging
-    if (_AccumulatesXyz != 0u)
+    if (xyz)
         color = XyzToLinearSrgb(color);
     if (_ShowGrayRamp != 0u)
     {
@@ -60,6 +72,10 @@ void Display(uint3 id : SV_DispatchThreadID)
 
         if (_ApplyExposure != 0u)
             color *= _ExposureScale;
+
+        // a one pixel white line marks the divider, in the column it falls in
+        if (_SplitScreen != 0u && id.x == min((uint)(_SplitPosition * _Resolution.x), _Resolution.x - 1u))
+            color = 1.0f;
     }
 
     // srgb encoding done with the blit

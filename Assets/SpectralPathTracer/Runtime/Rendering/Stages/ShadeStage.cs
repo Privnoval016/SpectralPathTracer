@@ -71,7 +71,7 @@ namespace SpectralPathTracer
             passData.Scene = scene;
             passData.Constants = frame.Constants;
             passData.SpectralKeyword = SpectralKeyword;
-            passData.Spectral = frame.Params.Spectral;
+            passData.Spectral = frame.Spectral;
 
             builder.UseBuffer(paths.Rays, AccessFlags.ReadWrite);
             builder.UseBuffer(paths.Hits, AccessFlags.Read);

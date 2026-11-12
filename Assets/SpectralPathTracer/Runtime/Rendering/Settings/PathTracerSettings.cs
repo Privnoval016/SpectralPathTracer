@@ -42,6 +42,13 @@ namespace SpectralPathTracer
         [field: Tooltip("Carry four wavelengths per path instead of RGB colors.")]
         [field: SerializeField] public bool Spectral { get; private set; } = false;
 
+        [field: Tooltip("Render both modes every frame, RGB left of the divider and spectral right of it.")]
+        [field: SerializeField] public bool SplitScreen { get; private set; } = false;
+
+        [field: Tooltip("Where the divider sits, as a fraction of the image width from the left.")]
+        [field: Range(0f, 1f)]
+        [field: SerializeField] public float SplitPosition { get; private set; } = 0.5f;
+
         [field: Tooltip("Stop accumulating after this many samples per pixel; 0 keeps going forever.")]
         [field: Min(0)]
         [field: SerializeField] public int TargetSamples { get; private set; } = 1024;

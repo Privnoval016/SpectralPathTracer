@@ -27,6 +27,7 @@ namespace SpectralPathTracer
 
         private readonly SceneCompiler _sceneCompiler;
         private readonly AccumulationBuffer _accumulation = new AccumulationBuffer();
+        private readonly AccumulationBuffer _spectralAccumulation = new AccumulationBuffer(); // the second image in split screen
         private readonly FrameConstantsBuffer _constants = new FrameConstantsBuffer();
         private readonly LivePathStats _liveStats = new LivePathStats();
         private readonly DisplayCapture _capture = new DisplayCapture();
@@ -46,6 +47,7 @@ namespace SpectralPathTracer
         // check overrides first
         private int TargetSamples => PathTracerOverrides.TargetSamples ?? _settings.TargetSamples;
         private float FrameBudgetMs => PathTracerOverrides.FrameBudgetMs ?? _settings.FrameBudgetMs;
+        private float SplitPosition => PathTracerOverrides.SplitPosition ?? _settings.SplitPosition;
 
         #endregion
 
@@ -94,13 +96,15 @@ namespace SpectralPathTracer
             bool accumulating = !_settings.Paused && (TargetSamples == 0 || _sampleCount < TargetSamples);
 
             BufferHandle constants = _constants.Record(renderGraph, BuildConstants(renderParams));
-            var frame = new FrameContext(renderParams, constants);
+            var frame = new FrameContext(renderParams, constants, renderParams.Spectral);
 
+            // without split screen the second image is the first buffer again, so Display always has two to bind
             BufferHandle accumulation = _accumulation.Import(renderGraph);
+            BufferHandle spectralAccumulation = renderParams.SplitScreen ? _spectralAccumulation.Import(renderGraph) : accumulation;
             if (accumulating)
             {
                 BufferHandle livePaths = _liveStats.RecordClear(renderGraph);
-                RecordWavefront(renderGraph, frame, accumulation, livePaths);
+                RecordWavefront(renderGraph, frame, accumulation, spectralAccumulation, livePaths);
                 _liveStats.RecordReadback(renderGraph, livePaths);
             }
             else
@@ -109,7 +113,7 @@ namespace SpectralPathTracer
             AccumulationProgress.Report((int)_sampleCount, TargetSamples, accumulating);
 
             // runs even while paused, so exposure works on a frozen image
-            display = _displayStage.Record(renderGraph, frame, accumulation);
+            display = _displayStage.Record(renderGraph, frame, accumulation, spectralAccumulation);
             _capture.Record(renderGraph, display, frame.RenderSize);
             _sumsCapture.Record(renderGraph, accumulation, frame.RenderSize);
             return true;
@@ -123,6 +127,7 @@ namespace SpectralPathTracer
         public void Dispose()
         {
             _accumulation.Dispose();
+            _spectralAccumulation.Dispose();
             _constants.Dispose();
             _liveStats.Dispose();
             _sceneCompiler.Dispose();
@@ -164,6 +169,12 @@ namespace SpectralPathTracer
         {
             bool resized = _accumulation.Ensure(renderParams.RenderSize);
             bool requested = PathTracerOverrides.TakeRestart();
+
+            // the second image only exists while split screen is on
+            if (renderParams.SplitScreen)
+                resized |= _spectralAccumulation.Ensure(renderParams.RenderSize);
+            else
+                _spectralAccumulation.Dispose();
 
             if (resized || sceneChanged || requested || !renderParams.Equals(_params))
             {
@@ -209,7 +220,10 @@ namespace SpectralPathTracer
                 _ApplyExposure = renderParams.Aov == Aov.None ? 1u : 0u, // AOVs are data with fixed encodings so they skip exposure
                 _ShowGrayRamp = _settings.ShowGrayRamp ? 1u : 0u,
                 _ShowSpectrumStrip = _settings.ShowSpectrumStrip ? 1u : 0u,
-                _AccumulatesXyz = renderParams.Spectral && renderParams.Aov == Aov.None ? 1u : 0u // aovs stay as they are
+                _AccumulatesXyz = renderParams.Spectral && !renderParams.SplitScreen && renderParams.Aov == Aov.None ? 1u : 0u, // aovs stay as they are
+
+                _SplitPosition = SplitPosition,
+                _SplitScreen = renderParams.SplitScreen ? 1u : 0u
             };
         }
 
@@ -220,9 +234,10 @@ namespace SpectralPathTracer
          * <param name="renderGraph">The render graph recording this frame.</param>
          * <param name="frame">This frame's context.</param>
          * <param name="accumulation">The running sums to add this frame's samples to.</param>
+         * <param name="spectralAccumulation">The spectral image's sums in split screen.</param>
          * <param name="livePaths">The per-depth live path counts, cleared this frame.</param>
          */
-        private void RecordWavefront(RenderGraph renderGraph, in FrameContext frame, BufferHandle accumulation, BufferHandle livePaths)
+        private void RecordWavefront(RenderGraph renderGraph, in FrameContext frame, BufferHandle accumulation, BufferHandle spectralAccumulation, BufferHandle livePaths)
         {
             SceneBuffers scene = _sceneCompiler.Import(renderGraph);
 
@@ -236,7 +251,15 @@ namespace SpectralPathTracer
                 if (_scheduler.Cursor == 0 && TargetSamples != 0 && _sampleCount >= TargetSamples)
                     break;
 
-                RecordWave(renderGraph, frame, scene, accumulation, livePaths, _scheduler.Cursor * WaveSize);
+                int waveStart = _scheduler.Cursor * WaveSize;
+                if (frame.Params.SplitScreen)
+                {
+                    // the same wave twice on the same random numbers, so the halves differ only in how color is carried
+                    RecordWave(renderGraph, frame.InMode(false), scene, accumulation, livePaths, waveStart);
+                    RecordWave(renderGraph, frame.InMode(true), scene, spectralAccumulation, livePaths, waveStart);
+                }
+                else
+                    RecordWave(renderGraph, frame, scene, accumulation, livePaths, waveStart);
 
                 if (_scheduler.Advance(wavesPerSample))
                     _sampleCount++;

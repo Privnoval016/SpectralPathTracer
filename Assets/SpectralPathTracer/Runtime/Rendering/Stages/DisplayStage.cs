@@ -18,6 +18,7 @@ namespace SpectralPathTracer
             public ComputeShader Shader;
             public int Kernel;
             public BufferHandle Accumulation;
+            public BufferHandle SpectralAccumulation;
             public TextureHandle Display;
             public readonly int[] Resolution = new int[2];
             public int GroupsX;
@@ -36,9 +37,10 @@ namespace SpectralPathTracer
          * <param name="renderGraph">The render graph recording this frame.</param>
          * <param name="frame">This frame's context.</param>
          * <param name="accumulation">The per-pixel sums of linear radiance.</param>
+         * <param name="spectralAccumulation">The spectral image's sums in split screen, otherwise the same buffer.</param>
          * <returns>The display texture, valid for this frame's render graph.</returns>
          */
-        public TextureHandle Record(RenderGraph renderGraph, in FrameContext frame, BufferHandle accumulation)
+        public TextureHandle Record(RenderGraph renderGraph, in FrameContext frame, BufferHandle accumulation, BufferHandle spectralAccumulation)
         {
             var desc = new TextureDesc(frame.RenderSize.x, frame.RenderSize.y)
             {
@@ -54,6 +56,7 @@ namespace SpectralPathTracer
             passData.Shader = Shader;
             passData.Kernel = Kernel;
             passData.Accumulation = accumulation;
+            passData.SpectralAccumulation = spectralAccumulation;
             passData.Display = display;
             passData.Resolution[0] = frame.RenderSize.x;
             passData.Resolution[1] = frame.RenderSize.y;
@@ -62,6 +65,8 @@ namespace SpectralPathTracer
             passData.Constants = frame.Constants;
 
             builder.UseBuffer(accumulation, AccessFlags.Read);
+            if (frame.Params.SplitScreen)
+                builder.UseBuffer(spectralAccumulation, AccessFlags.Read); // otherwise it is the buffer above, declared once
             builder.UseTexture(display, AccessFlags.Write);
             builder.UseBuffer(frame.Constants, AccessFlags.Read);
 
@@ -70,6 +75,7 @@ namespace SpectralPathTracer
             {
                 var cmd = context.cmd;
                 cmd.SetComputeBufferParam(data.Shader, data.Kernel, ShaderIDs.AccumulationID, data.Accumulation);
+                cmd.SetComputeBufferParam(data.Shader, data.Kernel, ShaderIDs.SpectralAccumulationID, data.SpectralAccumulation);
                 cmd.SetComputeTextureParam(data.Shader, data.Kernel, ShaderIDs.DisplayID, data.Display);
                 cmd.SetComputeIntParams(data.Shader, ShaderIDs.ResolutionID, data.Resolution);
                 SetFrameConstants(cmd, data.Shader, data.Constants);

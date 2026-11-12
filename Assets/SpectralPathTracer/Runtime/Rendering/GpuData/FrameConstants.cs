@@ -43,7 +43,12 @@ namespace SpectralPathTracer
         public Vector4 _SkyZenithSpectrum; // 176 to 191
         public Vector4 _SkyHorizonSpectrum; // 192 to 207
         public Vector4 _SkyGroundSpectrum; // 208 to 223
-        
-        // size = 224, a multiple of 16
+
+        public float _SplitPosition; // 224
+        public uint _SplitScreen; // 228
+        public uint _Padding0; // 232
+        public uint _Padding1; // 236
+
+        // size = 240, a multiple of 16
     }
 }

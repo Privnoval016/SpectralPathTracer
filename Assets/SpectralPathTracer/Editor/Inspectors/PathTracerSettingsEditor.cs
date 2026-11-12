@@ -19,14 +19,23 @@ namespace SpectralPathTracer
 
         public override void OnInspectorGUI()
         {
-            DrawDefaultInspector();
+            serializedObject.Update();
+
+            // the script field stays read only, as the default inspector draws it
+            using (new EditorGUI.DisabledScope(true))
+                EditorGUILayout.PropertyField(serializedObject.FindProperty("m_Script"));
+
+            DrawPropertiesExcluding(serializedObject, HiddenFields());
+            serializedObject.ApplyModifiedProperties();
 
             EditorGUILayout.Space();
             string target = AccumulationProgress.TargetSamples == 0 ? "no limit" : AccumulationProgress.TargetSamples.ToString();
             EditorGUILayout.LabelField("Samples", $"{AccumulationProgress.Samples} / {target}");
             EditorGUILayout.LabelField("Frame", $"{RenderStats.FrameMs:F1} ms, {RenderStats.WavesPerFrame} waves");
 
-            _showLivePaths = EditorGUILayout.Foldout(_showLivePaths, "Live paths per depth", true);
+            // split screen runs every wave twice, so the counts cover both images
+            string heading = ((PathTracerSettings)this.target).SplitScreen ? "Live paths per depth (both images)" : "Live paths per depth";
+            _showLivePaths = EditorGUILayout.Foldout(_showLivePaths, heading, true);
             if (_showLivePaths)
                 DrawLivePaths(((PathTracerSettings)this.target).MaxBounces);
         }
@@ -37,6 +46,33 @@ namespace SpectralPathTracer
         }
 
         #region Helpers
+
+        /**
+         * <summary>
+         * The fields that don't apply with the current settings, so the inspector leaves them out.
+         * </summary>
+         * <returns>The serialized names to skip, including the script field drawn above.</returns>
+         */
+        private string[] HiddenFields()
+        {
+            var settings = (PathTracerSettings)this.target;
+            var hidden = new List<string> { "m_Script" };
+
+            if (!settings.IsEnabledFor(false))
+                hidden.Add("editModeScale");
+
+            if (!settings.IsEnabledFor(true))
+                hidden.Add("playModeScale");
+
+            // split screen renders both modes, so the single-mode switch does nothing
+            if (settings.SplitScreen)
+                hidden.Add("<Spectral>k__BackingField");
+            else
+                hidden.Add("<SplitPosition>k__BackingField");
+
+
+            return hidden.ToArray();
+        }
 
         /**
          * <summary>
