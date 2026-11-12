@@ -81,6 +81,10 @@ flowchart TD
   buffers; `FrameContext.InMode` tells each pass which keyword to set. Display shows RGB left of the divider and spectral
   right of it, so the divider can move across converged images without restarting anything, and each half matches its
   single-mode render pixel for pixel. The second buffer only exists while split screen is on.
+- **Wavelength lock.** Lock Wavelength (or `PathTracerOverrides.LockedWavelength`) makes every spectral path trace one
+  wavelength. Resolve then accumulates the radiance itself, since a fixed wavelength is no integral to estimate, and
+  Display tints it with that wavelength's hue (`WavelengthTint`). The lock only touches the spectral image, so in split
+  screen the RGB side is unaffected.
 - **Frame constants.** Values that hold for the whole frame travel in one constant buffer, `FrameConstants`, uploaded
   once and read through `GpuData.hlsl`. Only per-dispatch values like the depth and queue offsets stay as
   separate uniforms.

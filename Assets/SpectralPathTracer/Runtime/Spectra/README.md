@@ -92,6 +92,10 @@ HLSL include. Both read the C# tables in `Cie`, so the CPU and the GPU use the s
   only the average over many samples is a displayable color. Only Display clamps.
 - In split screen both paths above run every wave: the RGB sums go to the first buffer, the XYZ sums to the second, and
   Display converts only the spectral side.
+- A locked wavelength skips the XYZ step: Resolve sums $L(\lambda_0)$ as gray, and Display multiplies by the
+  wavelength's tint, the strip's gamut-mapped color scaled so its brightest channel is 1.
+- Exact white and black albedos snap to flat spectra of 1 and 0 (a sigmoid with $c_2 = \pm 10^4$), since the fitted
+  white only reaches 0.99986, which the locked furnace exposed.
 - AOVs are data, not light. Resolve accumulates them as they are, and Display skips the XYZ conversion for them.
 - `Cie` (C#) is the single source of the CIE data. Regenerate `CieTables.hlsl` with Tools > Spectral Path Tracer >
   Generate CIE Shader Table after changing it, and rebuild the sigmoid table with Build Sigmoid Table after changing

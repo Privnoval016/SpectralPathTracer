@@ -8,6 +8,9 @@ accumulation has got, `PathTracerOverrides` to override the target, the budget o
 - `FlyCamera` flies the camera in Play Mode (WASD, Q and E, look while Space or the right mouse button is held).
 - The "Follow Scene View" overlay makes the Main Camera copy the Scene view in Edit Mode.
 - `MovieMode` renders a Timeline frame by frame, each to a fixed sample count, and saves PNGs.
+- `ContactSheet` renders the scene locked at 400, 420, ..., 700 nm in Play Mode, each tile to the same sample count, and
+  tiles them into one labeled 4 by 4 image at `Recordings/ContactSheets/<scene>.png`. Add it to any GameObject while in
+  Play Mode; it disables itself when done and clears its overrides.
 - `SplitDivider` drags the split screen divider in Play Mode: press the left button within a few pixels of the line and
   drag. It maps the cursor through the same letterbox as Present (`PresentStage.FitInside`), so the line stays under
   it, and sets `PathTracerOverrides.SplitPosition`, which clears when the component is disabled or Play Mode ends.
@@ -64,6 +67,9 @@ the mean, min and max radiance and the sample counts. Run both after every check
 |---|---|---|---|
 | `Furnace` | albedo 1 sphere in a uniform sky of 1 | exactly 1 | every pixel, tolerance $10^{-4}$ |
 | `FurnacePlanes` | two facing planes, emission 1, linear albedo 0.5, black sky | $2 - 2^{-16} = 1.99998$ at 16 bounces | the mean, tolerance $2 \times 10^{-3}$ |
+
+With the wavelength locked, the check expects white light's radiance at that wavelength, $D65(\lambda_0)$ times
+`CIE_D65_SCALE`, and judges every pixel again, since nothing about the color is random.
 
 In spectral mode each sample carries one wavelength, so single pixels are noisy; the check then judges only the mean,
 against each expectation's spectral tolerance (0.01).
