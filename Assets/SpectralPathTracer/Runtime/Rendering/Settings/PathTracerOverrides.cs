@@ -14,6 +14,7 @@ namespace SpectralPathTracer
         public static float? FrameBudgetMs { get; set; }
         public static float? SplitPosition { get; set; }
         public static float? LockedWavelength { get; set; } // nm, which locks the wavelength while set
+        public static bool? Spectral { get; set; } // a tool forcing one mode also turns split screen off
 
         #endregion
 
@@ -23,6 +24,7 @@ namespace SpectralPathTracer
             FrameBudgetMs = null;
             SplitPosition = null;
             LockedWavelength = null;
+            Spectral = null;
         }
 
         /**

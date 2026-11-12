@@ -91,7 +91,9 @@ namespace SpectralPathTracer
                 return false;
 
             var pinhole = PinholeCamera.From(camera, _settings.OutputAspectRatio);
-            var renderParams = RenderParams.From(_settings, _aovSettings, pinhole, Application.isPlaying, LockedWavelength);
+            bool spectral = PathTracerOverrides.Spectral ?? _settings.Spectral;
+            bool splitScreen = !PathTracerOverrides.Spectral.HasValue && _settings.SplitScreen; // a forced mode is one image
+            var renderParams = RenderParams.From(_settings, _aovSettings, pinhole, Application.isPlaying, spectral, splitScreen, LockedWavelength);
 
             UpdateAccumulation(renderParams, sceneChanged);
             bool accumulating = !_settings.Paused && (TargetSamples == 0 || _sampleCount < TargetSamples);

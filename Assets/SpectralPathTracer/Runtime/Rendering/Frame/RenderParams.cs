@@ -58,13 +58,15 @@ namespace SpectralPathTracer
          * <param name="aovSettings">Which AOV to show, and how.</param>
          * <param name="camera">This frame's camera.</param>
          * <param name="isPlaying">Whether the Editor is in Play Mode.</param>
+         * <param name="spectral">Whether to render in spectral mode.</param>
+         * <param name="splitScreen">Whether to render both modes side by side.</param>
          * <param name="lockedWavelength">The wavelength spectral paths are locked to in nm, or 0.</param>
          * <returns>The parameters to render with.</returns>
          */
-        public static RenderParams From(PathTracerSettings settings, AovSettings aovSettings, PinholeCamera camera, bool isPlaying, float lockedWavelength)
+        public static RenderParams From(PathTracerSettings settings, AovSettings aovSettings, PinholeCamera camera, bool isPlaying, bool spectral, bool splitScreen, float lockedWavelength)
         {
             var depthRange = new Vector2(aovSettings.DepthNear, aovSettings.DepthFar);
-            return new RenderParams(camera, settings.RenderResolutionFor(isPlaying), settings.OutputResolution, settings.MaxBounces, settings.PixelJitter, settings.RussianRoulette, settings.Spectral, settings.SplitScreen, lockedWavelength, aovSettings.Aov, depthRange, aovSettings.NoiseDimension);
+            return new RenderParams(camera, settings.RenderResolutionFor(isPlaying), settings.OutputResolution, settings.MaxBounces, settings.PixelJitter, settings.RussianRoulette, spectral, splitScreen, lockedWavelength, aovSettings.Aov, depthRange, aovSettings.NoiseDimension);
         }
 
         public bool Equals(RenderParams other)
