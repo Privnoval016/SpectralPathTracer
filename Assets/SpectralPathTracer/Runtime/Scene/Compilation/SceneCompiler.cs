@@ -28,12 +28,15 @@ namespace SpectralPathTracer
         private readonly GrowableBuffer<GpuObject> _objects = new GrowableBuffer<GpuObject>("PathTracerObjects");
         private readonly GrowableBuffer<GpuMaterial> _materials = new GrowableBuffer<GpuMaterial>("PathTracerMaterials");
 
+        private readonly List<float> _spectrumData = new List<float>(); // measured spectra, 95 values each
+        private readonly GrowableBuffer<float> _spectrumTables = new GrowableBuffer<float>("PathTracerSpectra");
+
         private int _builtVersion = -1;
         private int _defaultMaterialIndex = -1;
 
         private bool _reportedMultipleSkies;
 
-        private readonly SigmoidTable _spectra; // null when no table is assigned, which leaves every spectrum black
+        private readonly SigmoidTable _sigmoidTable; // null when no table is assigned, which leaves every spectrum black
 
         #endregion
 
@@ -56,7 +59,7 @@ namespace SpectralPathTracer
          */
         public SceneCompiler(SigmoidTable spectra)
         {
-            _spectra = spectra;
+            _sigmoidTable = spectra;
         }
 
         /**
@@ -105,7 +108,7 @@ namespace SpectralPathTracer
          */
         public SceneBuffers Import(RenderGraph renderGraph)
         {
-            return new SceneBuffers(_objects.Import(renderGraph), _materials.Import(renderGraph), ObjectCount);
+            return new SceneBuffers(_objects.Import(renderGraph), _materials.Import(renderGraph), _spectrumTables.Import(renderGraph), ObjectCount);
         }
 
 
@@ -113,13 +116,14 @@ namespace SpectralPathTracer
         {
             _objects.Dispose();
             _materials.Dispose();
+            _spectrumTables.Dispose();
         }
 
         #region Helpers
 
         private Vector4 Unbounded(Color color)
         {
-            return _spectra?.Unbounded(new Vector3(color.r, color.g, color.b)) ?? Vector4.zero;
+            return _sigmoidTable?.Unbounded(new Vector3(color.r, color.g, color.b)) ?? Vector4.zero;
         }
 
         private bool HasChanged()
@@ -145,6 +149,7 @@ namespace SpectralPathTracer
         {
             _objectData.Clear();
             _materialData.Clear();
+            _spectrumData.Clear();
             _materialIndices.Clear();
             _defaultMaterialIndex = -1;
 
@@ -179,42 +184,75 @@ namespace SpectralPathTracer
             if (material == null)
             {
                 if (_defaultMaterialIndex < 0)
-                    _defaultMaterialIndex = AddMaterial(SpectralMaterial.DefaultAlbedo, Color.black, 0f);
+                    _defaultMaterialIndex = AddMaterial(SpectralMaterial.DefaultAlbedo, Color.black, 0f, null, null);
 
                 return _defaultMaterialIndex;
             }
 
             if (!_materialIndices.TryGetValue(material, out int index))
             {
-                index = AddMaterial(material.Albedo, material.EmissionColor, material.EmissionStrength);
+                index = AddMaterial(material.Albedo, material.EmissionColor, material.EmissionStrength, material.ReflectanceSpectrum, material.EmissionSpectrum);
                 _materialIndices.Add(material, index);
             }
 
             return index;
         }
 
-        private int AddMaterial(Color albedo, Color emissionColor, float emissionStrength)
+        private int AddMaterial(Color albedo, Color emissionColor, float emissionStrength, MeasuredSpectrum reflectance, MeasuredSpectrum emission)
         {
             Color linearAlbedo = albedo.linear;
-            Color emission = emissionColor.linear * emissionStrength;
+            Color linearEmission = emissionColor.linear * emissionStrength;
             var albedoRgb = new Vector3(linearAlbedo.r, linearAlbedo.g, linearAlbedo.b);
-            var emissionRgb = new Vector3(emission.r, emission.g, emission.b);
+            var emissionRgb = new Vector3(linearEmission.r, linearEmission.g, linearEmission.b);
+
+            // a measured spectrum replaces the picker color in both modes, so RGB mode shows the same material
+            if (reflectance != null)
+                albedoRgb = reflectance.ReflectanceRgb();
+
+            if (emission != null)
+                emissionRgb = emission.EmissionRgb() * emissionStrength;
+
 
             _materialData.Add(new GpuMaterial
             {
-                AlbedoSpectrum = _spectra?.Reflectance(albedoRgb) ?? Vector4.zero,
-                EmissionSpectrum = Unbounded(emission),
+                AlbedoSpectrum = _sigmoidTable?.Reflectance(albedoRgb) ?? Vector4.zero,
+                EmissionSpectrum = _sigmoidTable?.Unbounded(emissionRgb) ?? Vector4.zero,
                 Albedo = albedoRgb,
                 Emission = emissionRgb,
-                Type = (int)MaterialType.Lambert
+                Type = (int)MaterialType.Lambert,
+
+                ReflectanceTable = reflectance != null ? AddSpectrumTable(reflectance.Resample()) : -1,
+                EmissionTable = emission != null ? AddSpectrumTable(emission.Resample(emission.EmissionNormalization() * emissionStrength)) : -1
             });
             return _materialData.Count - 1;
+        }
+
+        /**
+         * <summary>
+         * Appends one resampled spectrum to the spectrum buffer.
+         * </summary>
+         * <param name="values">The spectrum on the fixed 5 nm grid.</param>
+         * <returns>The table's index, counted in whole spectra.</returns>
+         */
+        private int AddSpectrumTable(float[] values)
+        {
+            int index = _spectrumData.Count / (int)SpectrumTables.Count;
+            _spectrumData.AddRange(values);
+
+
+            return index;
         }
 
         private void Upload()
         {
             _objects.Upload(_objectData);
             _materials.Upload(_materialData);
+
+            // the spectrum buffer needs at least one value even when nothing is measured
+            if (_spectrumData.Count == 0)
+                _spectrumData.Add(0f);
+
+            _spectrumTables.Upload(_spectrumData);
         }
 
         /**

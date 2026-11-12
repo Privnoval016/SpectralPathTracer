@@ -1,6 +1,6 @@
 /**
  * <summary>
- * Materials, lights and the sky as spectra at a path's wavelengths, from sigmoid coefficients fitted on the CPU.
+ * Sigmoid spectra fitted on the CPU, and D65, evaluated at a path's wavelengths.
  * </summary>
  */
 
@@ -39,45 +39,6 @@ SampledSpectrum EvaluateSigmoid(float4 spectrum, float4 lambda)
 SampledSpectrum D65Spectrum(float4 lambda)
 {
     return float4(D65At(lambda.x), D65At(lambda.y), D65At(lambda.z), D65At(lambda.w)) * CIE_D65_SCALE;
-}
-
-/**
- * <summary>
- * A material's reflectance at the path's wavelengths.
- * </summary>
- * <param name="material">The surface's material.</param>
- * <param name="wavelengths">The path's wavelengths.</param>
- * <returns>The reflectance per lane.</returns>
- */
-SampledSpectrum ReflectanceSpectrum(GpuMaterial material, SampledWavelengths wavelengths)
-{
-#ifdef SPECTRAL
-    SampledSpectrum reflectance = EvaluateSigmoid(material.AlbedoSpectrum, wavelengths.Lambda);
-#else
-    SampledSpectrum reflectance = float4(material.Albedo, 0.0f);
-#endif
-
-    return reflectance;
-}
-
-/**
- * <summary>
- * A material's emitted radiance at the path's wavelengths.
- * </summary>
- * <param name="material">The surface's material.</param>
- * <param name="wavelengths">The path's wavelengths.</param>
- * <returns>The emitted radiance per lane.</returns>
- */
-SampledSpectrum EmissionSpectrum(GpuMaterial material, SampledWavelengths wavelengths)
-{
-#ifdef SPECTRAL
-    // a light's white is D65, so its color is a shape on top of daylight
-    SampledSpectrum emission = EvaluateSigmoid(material.EmissionSpectrum, wavelengths.Lambda) * D65Spectrum(wavelengths.Lambda);
-#else
-    SampledSpectrum emission = float4(material.Emission, 0.0f);
-#endif
-
-    return emission;
 }
 
 #endif

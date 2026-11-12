@@ -11,6 +11,9 @@ namespace SpectralPathTracer
         [field: ColorUsage(false, false)]
         [field: SerializeField] public Color Albedo { get; private set; } = DefaultAlbedo;
 
+        [field: Tooltip("A measured reflectance that replaces the albedo color in both modes.")]
+        [field: SerializeField] public MeasuredSpectrum ReflectanceSpectrum { get; private set; }
+
         [field: Header("Emission")]
 
         [field: Tooltip("Hue of the emitted light.")]
@@ -20,6 +23,9 @@ namespace SpectralPathTracer
         [field: Tooltip("Emitted radiance scale; 0 means the surface doesn't glow.")]
         [field: Min(0f)]
         [field: SerializeField] public float EmissionStrength { get; private set; } = 0f;
+
+        [field: Tooltip("A measured emission shape that replaces the emission color in both modes; strength still sets its brightness.")]
+        [field: SerializeField] public MeasuredSpectrum EmissionSpectrum { get; private set; }
 
         #endregion
 

@@ -9,7 +9,7 @@
 
 #include "../Common.hlsl"
 #include "../GpuData.hlsl"
-#include "../Spectrum/SigmoidSpectrum.hlsl"
+#include "../Spectrum/MaterialSpectra.hlsl"
 #include "../Sampling/Sampling.hlsl"
 
 struct BsdfSample

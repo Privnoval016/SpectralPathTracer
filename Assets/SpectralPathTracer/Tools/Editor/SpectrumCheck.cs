@@ -44,6 +44,35 @@ namespace SpectralPathTracer
 
 
             ReportTable();
+
+
+            ReportMeasured("White");
+            ReportMeasured("Red");
+            ReportMeasured("Green");
+        }
+
+        /**
+         * <summary>
+         * Compares a measured Cornell wall's color with the hand-picked color the RGB scene uses.
+         * </summary>
+         * <param name="wall">The wall's column name in the Cornell data.</param>
+         */
+        private static void ReportMeasured(string wall)
+        {
+            var spectrum = AssetDatabase.LoadAssetAtPath<MeasuredSpectrum>($"Assets/SpectralPathTracer/Data/Spectra/CornellBox/CornellBoxWalls{wall}.asset");
+            if (spectrum == null)
+            {
+                Debug.LogError($"Spectrum FAIL: no measured {wall} wall, import Data/Spectra/CornellBox/CornellBoxWalls.csv");
+                return;
+            }
+
+            Vector3 measured = spectrum.ReflectanceRgb();
+            Vector3 picked = CornellAlbedo($"Cornell{wall}");
+            float deltaE = (SigmoidFit.SrgbToLab(measured) - SigmoidFit.SrgbToLab(picked)).magnitude;
+
+
+            // a report rather than a pass, since the picked colors were never meant to match exactly
+            Debug.Log($"Spectrum note: measured {wall} wall is {measured.ToString("F3")}, the picked color {picked.ToString("F3")}, delta E {deltaE:F2}");
         }
 
         /**

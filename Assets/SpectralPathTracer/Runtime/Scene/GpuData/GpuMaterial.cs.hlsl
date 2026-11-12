@@ -13,6 +13,8 @@ struct GpuMaterial
     float3 Albedo;
     float3 Emission;
     int Type;
+    int ReflectanceTable;
+    int EmissionTable;
 };
 
 

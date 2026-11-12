@@ -14,6 +14,7 @@
 // bound together by SceneBuffers.Bind
 StructuredBuffer<GpuObject> _Objects;
 StructuredBuffer<GpuMaterial> _Materials;
+StructuredBuffer<float> _Spectra; // measured spectra, SPECTRUMTABLES_COUNT values each
 uint _ObjectCount;
 
 /**

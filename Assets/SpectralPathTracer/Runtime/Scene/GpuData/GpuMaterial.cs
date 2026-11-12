@@ -14,5 +14,7 @@ namespace SpectralPathTracer
         public Vector3 Albedo; // linear
         public Vector3 Emission; // linear radiance: color times strength
         public int Type; // MaterialType
+        public int ReflectanceTable; // which measured spectrum in the spectrum buffer, or -1 for the sigmoid
+        public int EmissionTable; // the same for emission, already scaled to the material's strength
     }
 }

@@ -26,5 +26,6 @@
 #include "../../Runtime/Scene/GpuData/MaterialType.cs.hlsl"
 #include "../../Runtime/Scene/GpuData/GpuObject.cs.hlsl"
 #include "../../Runtime/Scene/GpuData/GpuMaterial.cs.hlsl"
+#include "../../Runtime/Scene/GpuData/SpectrumTables.cs.hlsl"
 
 #endif
