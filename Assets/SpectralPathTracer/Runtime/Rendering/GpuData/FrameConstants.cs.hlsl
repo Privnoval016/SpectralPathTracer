@@ -30,7 +30,7 @@ CBUFFER_START(FrameConstants)
     float4 _SkyGroundSpectrum;
     float _SplitPosition;
     uint _SplitScreen;
-    uint _Padding0;
+    float _LockedWavelength;
     uint _Padding1;
 CBUFFER_END
 

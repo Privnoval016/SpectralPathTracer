@@ -13,6 +13,7 @@ namespace SpectralPathTracer
         public static int? TargetSamples { get; set; }
         public static float? FrameBudgetMs { get; set; }
         public static float? SplitPosition { get; set; }
+        public static float? LockedWavelength { get; set; } // nm, which locks the wavelength while set
 
         #endregion
 
@@ -21,6 +22,7 @@ namespace SpectralPathTracer
             TargetSamples = null;
             FrameBudgetMs = null;
             SplitPosition = null;
+            LockedWavelength = null;
         }
 
         /**

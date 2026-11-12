@@ -35,6 +35,12 @@ void Resolve(uint3 id : SV_DispatchThreadID)
         // lanes that ended early count as zero, so the survivors are scaled up to stand in for them
         SampledSpectrum radiance = path.Radiance / AverageValue(LaneMask(path.Flags));
         color = SpectrumToColor(radiance, wavelengths);
+
+#ifdef SPECTRAL
+        // a locked wavelength is no integral to estimate, so the sample is the radiance at that wavelength
+        if (_LockedWavelength > 0.0f)
+            color = path.Radiance.xxx;
+#endif
     }
 
     // the first sample after a reset replaces the old sum

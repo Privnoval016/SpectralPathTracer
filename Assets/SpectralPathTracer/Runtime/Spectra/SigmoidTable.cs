@@ -6,6 +6,12 @@ namespace SpectralPathTracer
     // the fitted sigmoid coefficients for every sRGB color (this is literally just a lookup table)
     public class SigmoidTable
     {
+        #region Constants
+
+        private const float SnapOffset = 1e4f; // S(10000) is 1 to within 2.5e-9, which rounds to exactly 1 in a float
+
+        #endregion
+
         #region Properties
 
         public int Resolution { get; }
@@ -98,7 +104,16 @@ namespace SpectralPathTracer
          */
         public Vector4 Reflectance(Vector3 rgb)
         {
+            // the sigmoid only reaches 0 and 1 in the limit, so exact white and black get a flat spectrum far out on it
+            if (rgb.x >= 1f && rgb.y >= 1f && rgb.z >= 1f)
+                return new Vector4(0f, 0f, SnapOffset, 1f);
+
+            if (rgb.x <= 0f && rgb.y <= 0f && rgb.z <= 0f)
+                return new Vector4(0f, 0f, -SnapOffset, 1f);
+
             Vector3 coefficients = Lookup(rgb);
+
+
             return new Vector4(coefficients.x, coefficients.y, coefficients.z, 1f);
         }
 

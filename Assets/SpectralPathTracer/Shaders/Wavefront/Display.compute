@@ -48,12 +48,14 @@ void Display(uint3 id : SV_DispatchThreadID)
     float column = (id.x + 0.5f) / _Resolution.x;
     float4 sum = _Accumulation[index];
     bool xyz = _AccumulatesXyz != 0u;
+    bool spectralSide = _SplitScreen == 0u; // without split screen the locked wavelength is only set in spectral mode
 
-    // right of the divider shows the spectral image, whose sums are XYZ unless an aov is showing
+    // right of the divider shows the spectral image, whose sums are XYZ unless an aov is showing or the wavelength is locked
     if (_SplitScreen != 0u && column >= _SplitPosition)
     {
         sum = _SpectralAccumulation[index];
-        xyz = _Aov == AOV_NONE;
+        xyz = _Aov == AOV_NONE && _LockedWavelength == 0.0f;
+        spectralSide = true;
     }
 
     float3 color = sum.w > 0.0f ? sum.rgb / sum.w : float3(0.0f, 0.0f, 0.0f); // the buffer holds sums, so divide by the count
@@ -61,6 +63,10 @@ void Display(uint3 id : SV_DispatchThreadID)
     // spectral mode sums XYZ, which becomes screen color only after averaging
     if (xyz)
         color = XyzToLinearSrgb(color);
+
+    // a locked image is radiance at one wavelength, labeled with that wavelength's hue
+    if (spectralSide && _LockedWavelength > 0.0f && _Aov == AOV_NONE)
+        color *= WavelengthTint(_LockedWavelength);
     if (_ShowGrayRamp != 0u)
     {
         color = ((id.x + 0.5f) / _Resolution.x).xxx; // linear ramp

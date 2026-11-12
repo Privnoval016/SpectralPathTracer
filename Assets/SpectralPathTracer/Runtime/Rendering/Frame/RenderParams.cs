@@ -20,6 +20,7 @@ namespace SpectralPathTracer
         public bool RussianRoulette { get; }
         public bool Spectral { get; }
         public bool SplitScreen { get; }
+        public float LockedWavelength { get; } // nm, or 0 while spectral paths draw random wavelengths
         public Aov Aov { get; }
         public Vector2 DepthRange { get; }
         public int NoiseDimension { get; }
@@ -33,7 +34,7 @@ namespace SpectralPathTracer
 
         #endregion
 
-        private RenderParams(PinholeCamera camera, Vector2Int renderSize, Vector2Int outputSize, int maxBounces, bool pixelJitter, bool russianRoulette, bool spectral, bool splitScreen, Aov aov, Vector2 depthRange, int noiseDimension)
+        private RenderParams(PinholeCamera camera, Vector2Int renderSize, Vector2Int outputSize, int maxBounces, bool pixelJitter, bool russianRoulette, bool spectral, bool splitScreen, float lockedWavelength, Aov aov, Vector2 depthRange, int noiseDimension)
         {
             Camera = camera;
             RenderSize = renderSize;
@@ -43,6 +44,7 @@ namespace SpectralPathTracer
             RussianRoulette = russianRoulette;
             Spectral = spectral;
             SplitScreen = splitScreen;
+            LockedWavelength = lockedWavelength;
             Aov = aov;
             DepthRange = depthRange;
             NoiseDimension = noiseDimension;
@@ -56,12 +58,13 @@ namespace SpectralPathTracer
          * <param name="aovSettings">Which AOV to show, and how.</param>
          * <param name="camera">This frame's camera.</param>
          * <param name="isPlaying">Whether the Editor is in Play Mode.</param>
+         * <param name="lockedWavelength">The wavelength spectral paths are locked to in nm, or 0.</param>
          * <returns>The parameters to render with.</returns>
          */
-        public static RenderParams From(PathTracerSettings settings, AovSettings aovSettings, PinholeCamera camera, bool isPlaying)
+        public static RenderParams From(PathTracerSettings settings, AovSettings aovSettings, PinholeCamera camera, bool isPlaying, float lockedWavelength)
         {
             var depthRange = new Vector2(aovSettings.DepthNear, aovSettings.DepthFar);
-            return new RenderParams(camera, settings.RenderResolutionFor(isPlaying), settings.OutputResolution, settings.MaxBounces, settings.PixelJitter, settings.RussianRoulette, settings.Spectral, settings.SplitScreen, aovSettings.Aov, depthRange, aovSettings.NoiseDimension);
+            return new RenderParams(camera, settings.RenderResolutionFor(isPlaying), settings.OutputResolution, settings.MaxBounces, settings.PixelJitter, settings.RussianRoulette, settings.Spectral, settings.SplitScreen, lockedWavelength, aovSettings.Aov, depthRange, aovSettings.NoiseDimension);
         }
 
         public bool Equals(RenderParams other)
@@ -76,6 +79,7 @@ namespace SpectralPathTracer
                 && RussianRoulette == other.RussianRoulette
                 && Spectral == other.Spectral
                 && SplitScreen == other.SplitScreen
+                && LockedWavelength == other.LockedWavelength
                 && Aov == other.Aov
                 && DepthRange == other.DepthRange
                 && NoiseDimension == other.NoiseDimension;

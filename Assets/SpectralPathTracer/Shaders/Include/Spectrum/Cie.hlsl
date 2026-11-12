@@ -64,6 +64,24 @@ float D65At(float lambda)
 
 /**
  * <summary>
+ * The hue of one wavelength as a label color.
+ * </summary>
+ * <param name="lambda">The wavelength in nm.</param>
+ * <returns>The linear sRGB tint.</returns>
+ */
+float3 WavelengthTint(float lambda)
+{
+    float3 rgb = mul(XYZ_TO_SRGB, MatchingFunctions(lambda));
+
+    // add white until it fits then scale so the brightest channel is 1
+    rgb -= min(0.0f, min(rgb.r, min(rgb.g, rgb.b)));
+
+
+    return rgb / max(max(rgb.r, max(rgb.g, rgb.b)), 1e-6f);
+}
+
+/**
+ * <summary>
  * Converts CIE XYZ to linear sRGB.
  * </summary>
  * <param name="xyz">The color in XYZ.</param>

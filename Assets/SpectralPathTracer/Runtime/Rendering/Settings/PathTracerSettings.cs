@@ -49,6 +49,13 @@ namespace SpectralPathTracer
         [field: Range(0f, 1f)]
         [field: SerializeField] public float SplitPosition { get; private set; } = 0.5f;
 
+        [field: Tooltip("Trace every spectral path at one fixed wavelength instead of random ones.")]
+        [field: SerializeField] public bool LockWavelength { get; private set; } = false;
+
+        [field: Tooltip("The wavelength in nm every spectral path traces while locked.")]
+        [field: Range(360f, 830f)]
+        [field: SerializeField] public float LockedWavelength { get; private set; } = 550f;
+
         [field: Tooltip("Stop accumulating after this many samples per pixel; 0 keeps going forever.")]
         [field: Min(0)]
         [field: SerializeField] public int TargetSamples { get; private set; } = 1024;

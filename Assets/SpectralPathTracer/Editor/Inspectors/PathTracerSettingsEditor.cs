@@ -70,6 +70,14 @@ namespace SpectralPathTracer
             else
                 hidden.Add("<SplitPosition>k__BackingField");
 
+            // the lock only affects spectral paths, so it's hidden while no spectral image is drawn
+            bool drawsSpectral = settings.Spectral || settings.SplitScreen;
+            if (!drawsSpectral)
+                hidden.Add("<LockWavelength>k__BackingField");
+
+            if (!drawsSpectral || !settings.LockWavelength)
+                hidden.Add("<LockedWavelength>k__BackingField");
+
 
             return hidden.ToArray();
         }

@@ -48,6 +48,7 @@ namespace SpectralPathTracer
         private int TargetSamples => PathTracerOverrides.TargetSamples ?? _settings.TargetSamples;
         private float FrameBudgetMs => PathTracerOverrides.FrameBudgetMs ?? _settings.FrameBudgetMs;
         private float SplitPosition => PathTracerOverrides.SplitPosition ?? _settings.SplitPosition;
+        private float LockedWavelength => PathTracerOverrides.LockedWavelength ?? (_settings.LockWavelength ? _settings.LockedWavelength : 0f);
 
         #endregion
 
@@ -90,7 +91,7 @@ namespace SpectralPathTracer
                 return false;
 
             var pinhole = PinholeCamera.From(camera, _settings.OutputAspectRatio);
-            var renderParams = RenderParams.From(_settings, _aovSettings, pinhole, Application.isPlaying);
+            var renderParams = RenderParams.From(_settings, _aovSettings, pinhole, Application.isPlaying, LockedWavelength);
 
             UpdateAccumulation(renderParams, sceneChanged);
             bool accumulating = !_settings.Paused && (TargetSamples == 0 || _sampleCount < TargetSamples);
@@ -220,10 +221,13 @@ namespace SpectralPathTracer
                 _ApplyExposure = renderParams.Aov == Aov.None ? 1u : 0u, // AOVs are data with fixed encodings so they skip exposure
                 _ShowGrayRamp = _settings.ShowGrayRamp ? 1u : 0u,
                 _ShowSpectrumStrip = _settings.ShowSpectrumStrip ? 1u : 0u,
-                _AccumulatesXyz = renderParams.Spectral && !renderParams.SplitScreen && renderParams.Aov == Aov.None ? 1u : 0u, // aovs stay as they are
+                _AccumulatesXyz = renderParams.Spectral && !renderParams.SplitScreen && renderParams.Aov == Aov.None && renderParams.LockedWavelength == 0f ? 1u : 0u, // aovs stay as they are
 
                 _SplitPosition = SplitPosition,
-                _SplitScreen = renderParams.SplitScreen ? 1u : 0u
+                _SplitScreen = renderParams.SplitScreen ? 1u : 0u,
+
+                // only set while a spectral image is drawn, so Display can tell the locked image by it
+                _LockedWavelength = renderParams.Spectral || renderParams.SplitScreen ? renderParams.LockedWavelength : 0f
             };
         }
 

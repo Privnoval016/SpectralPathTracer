@@ -29,7 +29,8 @@ namespace SpectralPathTracer
 
         private static void Report(Color[] means, Vector2Int size)
         {
-            bool spectral = IsSpectral();
+            bool spectral = IsSpectral(out float lockedWavelength);
+            bool locked = spectral && lockedWavelength > 0f;
 
             Vector4 min = Vector4.positiveInfinity;
             Vector4 max = Vector4.negativeInfinity;
@@ -39,7 +40,7 @@ namespace SpectralPathTracer
             {
                 // spectral mode accumulates XYZ, so compare in the same linear sRGB as RGB mode
                 Vector4 color = mean;
-                if (spectral)
+                if (spectral && !locked)
                 {
                     Vector3 rgb = Cie.XyzToLinearSrgb(new Vector3(mean.r, mean.g, mean.b));
                     color = new Vector4(rgb.x, rgb.y, rgb.z, mean.a);
@@ -65,27 +66,51 @@ namespace SpectralPathTracer
                 return;
             }
 
-            // one wavelength per sample leaves single pixels noisy, so spectral mode only judges the mean
-            float tolerance = spectral ? expectation.SpectralTolerance : expectation.Tolerance;
-            float error = Deviation(average, expectation.Expected);
-            if (expectation.EveryPixel && !spectral)
-                error = Mathf.Max(error, Deviation(min, expectation.Expected), Deviation(max, expectation.Expected));
+            // a locked image is radiance at one wavelength, so white light reads D65 there rather than 1
+            float expected = locked ? expectation.Expected * D65Radiance(lockedWavelength) : expectation.Expected;
+
+            // one random wavelength per sample leaves single pixels noisy, but a locked wavelength is exact again
+            bool meanOnly = spectral && !locked;
+            float tolerance = meanOnly ? expectation.SpectralTolerance : expectation.Tolerance;
+            float error = Deviation(average, expected);
+            if (expectation.EveryPixel && !meanOnly)
+                error = Mathf.Max(error, Deviation(min, expected), Deviation(max, expected));
 
             bool passed = error <= tolerance;
-            string verdict = $"Furnace {(passed ? "PASS" : "FAIL")} ({(spectral ? "spectral, mean only" : "RGB")}): off by {error:F5} (tolerance {tolerance:F5}), {numbers}";
+            string mode = locked ? $"locked at {lockedWavelength:F1} nm, expecting {expected:F5}" : spectral ? "spectral, mean only" : "RGB";
+            string verdict = $"Furnace {(passed ? "PASS" : "FAIL")} ({mode}): off by {error:F5} (tolerance {tolerance:F5}), {numbers}";
             if (passed)
                 Debug.Log(verdict);
             else
                 Debug.LogError(verdict); // shows up in the console's error count without reading the message
         }
 
-        private static bool IsSpectral()
+        private static bool IsSpectral(out float lockedWavelength)
         {
             string[] guids = AssetDatabase.FindAssets("t:PathTracerSettings");
             var settings = guids.Length > 0 ? AssetDatabase.LoadAssetAtPath<PathTracerSettings>(AssetDatabase.GUIDToAssetPath(guids[0])) : null;
 
+            lockedWavelength = PathTracerOverrides.LockedWavelength ?? (settings != null && settings.LockWavelength ? settings.LockedWavelength : 0f);
+
 
             return settings != null && settings.Spectral;
+        }
+
+        /**
+         * <summary>
+         * D65 at one wavelength, scaled the way the GPU scales white light.
+         * </summary>
+         * <param name="lambda">The wavelength in nm.</param>
+         * <returns>The radiance a white light of 1 has at that wavelength.</returns>
+         */
+        private static float D65Radiance(float lambda)
+        {
+            float d65Y = 0f;
+            for (int row = Cie.FirstWavelength; row <= Cie.LastWavelength; row++)
+                d65Y += Cie.D65At(row) * Cie.MatchingFunctions(row).y; // the same 1 nm sum as CIE_D65_SCALE
+
+
+            return Cie.D65At(lambda) * Cie.YIntegral / d65Y;
         }
 
         /**
