@@ -25,6 +25,7 @@ flowchart TD
     subgraph AUTHOR["Authored or measured"]
         picker["Picker color<br/>encoded sRGB"]
         measured["MeasuredSpectrum<br/>curve over nm, from CSV or drawn"]
+        emitter["Emitter on a shape<br/>blackbody at T, measured or color,<br/>strength as luminance Y"]
     end
 
     subgraph CPU["CPU, when the scene compiles"]
@@ -33,6 +34,7 @@ flowchart TD
         coeffs["Sigmoid coefficients<br/>c0, c1, c2 (and a scale)"]
         resample["Resample<br/>360 to 830 nm every 5 nm,<br/>lights normalized to Y = 1 times strength"]
         tocolor["Spectrum to linear sRGB<br/>integrate with D65 and the CMFs,<br/>then the XYZ to sRGB matrix"]
+        planck["Blackbody<br/>Planck at T, scaled to Y = strength,<br/>resampled every 5 nm and integrated to a color"]
     end
 
     subgraph GPU_RGB["GPU, RGB mode"]
@@ -56,6 +58,11 @@ flowchart TD
     measured --> resample
     measured --> tocolor
     tocolor -- "replaces the picker color" --> linear
+    emitter -- "blackbody" --> planck
+    emitter -- "measured" --> resample
+    emitter -- "color, at Y = strength" --> fit
+    planck -- "emission color" --> rgbpath
+    planck -- "spectrum buffer" --> evaluate
 
     linear -- "albedo, emission, sky colors" --> rgbpath --> rgbsum --> display
     coeffs --> evaluate
@@ -82,6 +89,8 @@ HLSL include. Both read the C# tables in `Cie`, so the CPU and the GPU use the s
 | Sigmoid spectrum | $s(\lambda) = \frac{1}{2} + \frac{x}{2\sqrt{1 + x^2}},\ x = c_0\lambda^2 + c_1\lambda + c_2$ | `EvaluateSigmoid`, `SigmoidSpectrum.Evaluate` |
 | Color to coefficients | trilinear lookup by largest channel, its value and the two ratios | `SigmoidTable.Lookup` |
 | Light shape | coefficients of $\text{rgb} / 2\max$, times the scale $2\max$, times $D65(\lambda) \cdot \texttt{CIE\_D65\_SCALE}$ | `SigmoidTable.Unbounded`, `EmissionSpectrum` |
+| Blackbody | $B(\lambda, T) = \frac{2hc^2}{\lambda^5}\,\frac{1}{e^{hc/\lambda k T} - 1}$, peaking at $2.898 \times 10^6 / T$ nm | `Blackbody.Radiance` |
+| Light at a luminance | scale by $\text{Strength}\cdot\int\bar y \,/\, \int B\,\bar y$, so $Y = \text{Strength}$ at every temperature | `Blackbody.Resample`, `Blackbody.Rgb` |
 | XYZ to CIELAB | $L^* = 116 f(Y/Y_w) - 16$, $a^* = 500\,(f(X/X_w) - f(Y/Y_w))$, $b^* = 200\,(f(Y/Y_w) - f(Z/Z_w))$, $f$ a cube root | `SigmoidFit.Lab` |
 
 ## Things that must stay true
@@ -96,9 +105,11 @@ HLSL include. Both read the C# tables in `Cie`, so the CPU and the GPU use the s
   wavelength's tint, the strip's gamut-mapped color scaled so its brightest channel is 1.
 - Exact white and black albedos snap to flat spectra of 1 and 0 (a sigmoid with $c_2 = \pm 10^4$), since the fitted
   white only reaches 0.99986, which the locked furnace exposed.
+- An `Emitter`'s light has luminance $Y$ equal to its Strength whatever its kind, temperature or color, and RGB mode
+  uses the color its spectrum integrates to, so the light itself matches across modes and only bounces differ.
 - AOVs are data, not light. Resolve accumulates them as they are, and Display skips the XYZ conversion for them.
 - `Cie` (C#) is the single source of the CIE data. Regenerate `CieTables.hlsl` with Tools > Spectral Path Tracer >
   Generate CIE Shader Table after changing it, and rebuild the sigmoid table with Build Sigmoid Table after changing
   the fit.
 
-The checkpoint devlogs cp-25 and cp-26 in `Docs/Checkpoints` explain the math step by step.
+The checkpoint devlogs cp-25, cp-26 and cp-29 in `Docs/Checkpoints` explain the math step by step.

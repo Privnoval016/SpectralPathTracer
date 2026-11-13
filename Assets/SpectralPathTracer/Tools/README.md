@@ -11,6 +11,9 @@ accumulation has got, `PathTracerOverrides` to override the target, the budget o
 - `ContactSheet` renders the scene locked at 400, 420, ..., 700 nm in Play Mode, each tile to the same sample count, and
   tiles them into one labeled 4 by 4 image at `Recordings/ContactSheets/<scene>.png`. Add it to any GameObject while in
   Play Mode; it disables itself when done and clears its overrides.
+- `TemperatureSweep` drives an `Emitter`'s temperature from a 0 to 1 Progress that a Timeline animates, stepping evenly
+  in mireds ($10^6/T$) so equal steps look like equal color changes. `Scenes/BlackbodySweep.unity` films it with movie
+  mode from 1800 to 10,000 K.
 - `SplitDivider` drags the split screen divider in Play Mode: press the left button within a few pixels of the line and
   drag. It maps the cursor through the same letterbox as Present (`PresentStage.FitInside`), so the line stays under
   it, and sets `PathTracerOverrides.SplitPosition`, which clears when the component is disabled or Play Mode ends.
@@ -30,8 +33,10 @@ accumulation has got, `PathTracerOverrides` to override the target, the budget o
    (ignored by git), and the component disables itself after the last one. Unity can be in the background.
 4. Make a video: `ffmpeg -framerate 30 -i frame_%04d.png -c:v libx264 -pix_fmt yuv420p -crf 12 movie.mp4`.
 
-Only transforms and the camera are noticed between frames today. An animated field on a component doesn't fire
-`OnValidate`, so the scene isn't rebuilt for it, and ScriptableObject fields can't be keyframed.
+Between frames the scene compiler notices transforms, the camera and every `Emitter`'s values. Other animated
+component fields don't fire `OnValidate`, so the scene isn't rebuilt for them, and ScriptableObject fields can't be
+keyframed. A Timeline's automatic length can land a hair short (5.999999999999 s), which drops the last frame; give it
+a fixed length.
 
 ```mermaid
 sequenceDiagram
@@ -81,7 +86,7 @@ multiple bounces and roulette. Picker colors are sRGB and get converted to linea
 
 ## Spectrum check
 
-Seven lines, each PASS or an error on FAIL. It needs no scene.
+Each line logs PASS, or an error on FAIL. It needs no scene.
 
 | Check | Expected | Catches |
 |---|---|---|
@@ -91,5 +96,8 @@ Seven lines, each PASS or an error on FAIL. It needs no scene.
 | Flat $Y$ from 65,536 uniform wavelengths, over the $\bar y$ integral | 1, within 0.02 | a missing $1/p$ (it would read about 0.002) |
 | Sigmoid fits of gray, the Cornell walls and the sRGB primaries | delta E under 0.1, and the color rebuilt from the nm coefficients | a broken fit or coefficient conversion |
 | 1,000 random colors through the sigmoid table | worst delta E under 1 | a broken table or lookup |
+| A 6504 K blackbody at $Y = 1$ | sRGB (1.043, 0.984, 1.036), within $2 \times 10^{-3}$ | a wrong Planck constant or normalization |
+| Planck's peak at 1800 K, scanned | Wien's $2.898 \times 10^6 / 1800 = 1610$ nm, within 1 nm | a wrong exponent or unit |
+| $Y$ of a blackbody resampled on the 5 nm grid at 1800, 6504, 10,000 K | 1, within $2 \times 10^{-3}$ | a broken luminance scale or resample |
 
 It also notes, without judging, how far the measured Cornell walls are from the hand-picked Cornell colors.
