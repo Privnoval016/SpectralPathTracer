@@ -28,7 +28,7 @@ namespace SpectralPathTracer
 
         [field: Tooltip("The temperature in kelvin, for the Blackbody kind.")]
         [field: Range(1000f, 20000f)]
-        [field: SerializeField] public float Temperature { get; private set; } = 6504f;
+        [field: SerializeField] public float Temperature { get; set; } = 6504f; // public so a sweep can drive it
 
         [field: Tooltip("Brightness as luminance Y, the same at every color and temperature.")]
         [field: Min(0f)]
