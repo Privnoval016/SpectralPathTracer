@@ -75,6 +75,22 @@ namespace SpectralPathTracer
 
         /**
          * <summary>
+         * The factor that makes D65 divided by the y-bar integral come out at Y = 1.
+         * </summary>
+         * <returns>The integral of y-bar over the integral of D65 times y-bar.</returns>
+         */
+        public static float D65Scale()
+        {
+            float d65Y = 0f;
+            for (int lambda = FirstWavelength; lambda <= LastWavelength; lambda++)
+                d65Y += D65At(lambda) * MatchingFunctions(lambda).y; // 1 nm steps, like the spectrum check
+
+
+            return YIntegral / d65Y;
+        }
+
+        /**
+         * <summary>
          * Converts CIE XYZ to linear sRGB, whose white (1, 1, 1) is D65 at Y = 1.
          * </summary>
          * <param name="xyz">The color in XYZ.</param>

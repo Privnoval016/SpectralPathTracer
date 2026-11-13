@@ -33,6 +33,8 @@ namespace SpectralPathTracer
         private readonly List<float> _spectrumData = new List<float>(); // measured spectra, 95 values each
         private readonly GrowableBuffer<float> _spectrumTables = new GrowableBuffer<float>("PathTracerSpectra");
         private readonly GrowableBuffer<float> _wavelengthCdf = new GrowableBuffer<float>("PathTracerWavelengthCdf");
+        private readonly float[] _visualWeights = WavelengthDistribution.VisualWeights(); // the eye's part never changes
+        private float _lightShare = -1f; // nothing uploaded yet
 
         private int _builtVersion = -1;
         private int _defaultMaterialIndex = -1;
@@ -69,10 +71,11 @@ namespace SpectralPathTracer
          * <summary>
          * Picks the sky, then rebuilds and uploads the scene buffers if anything changed since the last build.
          * </summary>
-         * <param name="changed">True if the sky or the scene changed this frame.</param>
+         * <param name="lightShare">How much of the wavelength distribution follows the scene's lights.</param>
+         * <param name="changed">True if the sky, the scene or the light share changed this frame.</param>
          * <returns>False if more than one Sky is enabled.</returns>
          */
-        public bool TryUpdate(out bool changed)
+        public bool TryUpdate(float lightShare, out bool changed)
         {
             changed = false;
             if (!TryResolveSky(out SkyColors sky))
@@ -96,6 +99,14 @@ namespace SpectralPathTracer
                 Upload();
                 CacheTransforms();
                 _builtVersion = TracedRegistry.Version;
+                changed = true;
+            }
+
+            // the distribution follows the lights and the sky, so it's rebuilt when either changes, or the share does
+            if (changed || lightShare != _lightShare)
+            {
+                _lightShare = lightShare;
+                UploadWavelengthCdf();
                 changed = true;
             }
 
@@ -285,9 +296,72 @@ namespace SpectralPathTracer
                 _spectrumData.Add(0f);
 
             _spectrumTables.Upload(_spectrumData);
+        }
 
-            // the eye's part only, until the scene's lights are mixed in
-            _wavelengthCdf.Upload(new List<float>(WavelengthDistribution.Cdf(WavelengthDistribution.WithUniformFloor(WavelengthDistribution.VisualWeights()))));
+        /**
+         * <summary>
+         * Builds the wavelength distribution from the eye and the scene's light, and uploads its CDF.
+         * </summary>
+         */
+        private void UploadWavelengthCdf()
+        {
+            float d65Scale = Cie.D65Scale();
+
+            // every shape's emission and the sky at each nm
+            var light = new float[Cie.SampleCount];
+            foreach (GpuObject gpuObject in _objectData)
+            {
+                GpuMaterial material = _materialData[gpuObject.MaterialIndex];
+                for (int i = 0; i < light.Length; i++)
+                    light[i] += EmissionAt(material, Cie.FirstWavelength + i, d65Scale);
+            }
+
+            for (int i = 0; i < light.Length; i++)
+                light[i] += SkyAt(Cie.FirstWavelength + i, d65Scale);
+
+            float[] weights = WavelengthDistribution.Mix(_visualWeights, WavelengthDistribution.LightWeights(light), _lightShare);
+            _wavelengthCdf.Upload(new List<float>(WavelengthDistribution.Cdf(WavelengthDistribution.WithUniformFloor(weights))));
+        }
+
+        /**
+         * <summary>
+         * A material's emitted radiance at one wavelength, chosen the way EmissionSpectrum chooses on the GPU.
+         * </summary>
+         * <param name="material">The material.</param>
+         * <param name="lambda">The wavelength in nm.</param>
+         * <param name="d65Scale">The factor that puts D65 at Y = 1.</param>
+         * <returns>The emitted radiance.</returns>
+         */
+        private float EmissionAt(GpuMaterial material, int lambda, float d65Scale)
+        {
+            if (material.EmissionTable >= 0)
+                return TableAt(material.EmissionTable, lambda);
+
+            // an RGB light's white is D65, with the fitted shape and its scale on top
+            return SigmoidAt(material.EmissionSpectrum, lambda) * Cie.D65At(lambda) * d65Scale;
+        }
+
+        // the sky's three colors averaged, since one table can't follow direction
+        private float SkyAt(int lambda, float d65Scale)
+        {
+            float shape = SigmoidAt(SkyZenithSpectrum, lambda) + SigmoidAt(SkyHorizonSpectrum, lambda) + SigmoidAt(SkyGroundSpectrum, lambda);
+            return shape / 3f * Cie.D65At(lambda) * d65Scale;
+        }
+
+        private static float SigmoidAt(Vector4 spectrum, int lambda)
+        {
+            return SigmoidSpectrum.Evaluate(spectrum, lambda) * spectrum.w; // xyz are the coefficients, w the scale
+        }
+
+        // the CPU twin of TabulatedAt, reading the 5 nm values this rebuild appended
+        private float TableAt(int table, int lambda)
+        {
+            float position = Mathf.Clamp((lambda - (int)SpectrumTables.FirstWavelength) / (float)(int)SpectrumTables.Step, 0f, (int)SpectrumTables.Count - 1);
+            int row = Mathf.Min((int)position, (int)SpectrumTables.Count - 2);
+            int start = table * (int)SpectrumTables.Count;
+
+
+            return Mathf.Lerp(_spectrumData[start + row], _spectrumData[start + row + 1], position - row);
         }
 
         /**

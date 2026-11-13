@@ -51,7 +51,7 @@ namespace SpectralPathTracer
             text.AppendLine($"static const float CIE_D65_FIRST = {Cie.D65First}.0f;");
             text.AppendLine($"static const float CIE_D65_STEP = {Cie.D65Step}.0f;");
             text.AppendLine($"static const uint CIE_D65_COUNT = {Cie.D65.Length}u;");
-            text.AppendLine($"static const float CIE_D65_SCALE = {Literal(D65Scale())}; // rescales D65 so a light of white 1 has Y = 1");
+            text.AppendLine($"static const float CIE_D65_SCALE = {Literal(Cie.D65Scale())}; // rescales D65 so a light of white 1 has Y = 1");
             text.AppendLine();
 
             text.AppendLine($"static const float CIE_D65[{Cie.D65.Length}] =");
@@ -68,22 +68,6 @@ namespace SpectralPathTracer
 
             File.WriteAllText(OutputPath, text.ToString());
             AssetDatabase.ImportAsset(OutputPath);
-        }
-
-        /**
-         * <summary>
-         * The factor that makes D65, divided by the y-bar integral like every sample, come out at Y = 1.
-         * </summary>
-         * <returns>The integral of y-bar over the integral of D65 times y-bar.</returns>
-         */
-        private static float D65Scale()
-        {
-            float d65Y = 0f;
-            for (int lambda = Cie.FirstWavelength; lambda <= Cie.LastWavelength; lambda++)
-                d65Y += Cie.D65At(lambda) * Cie.MatchingFunctions(lambda).y; // 1 nm steps, like the spectrum check
-
-
-            return Cie.YIntegral / d65Y;
         }
 
         /**

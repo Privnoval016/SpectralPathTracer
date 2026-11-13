@@ -87,7 +87,7 @@ namespace SpectralPathTracer
         public bool TryRecord(RenderGraph renderGraph, Camera camera, out TextureHandle display)
         {
             display = TextureHandle.nullHandle;
-            if (!TryClaimCamera(camera) || !_sceneCompiler.TryUpdate(out bool sceneChanged))
+            if (!TryClaimCamera(camera) || !_sceneCompiler.TryUpdate(_settings.LightShare, out bool sceneChanged))
                 return false;
 
             var pinhole = PinholeCamera.From(camera, _settings.OutputAspectRatio);

@@ -56,5 +56,12 @@ namespace SpectralPathTracer
         {
             _emitter.Temperature = Temperature;
         }
+
+        // Edit Mode runs no LateUpdate, so loading the scene or editing the sweep applies it here
+        private void OnValidate()
+        {
+            if (TryGetComponent(out Emitter emitter))
+                emitter.Temperature = Temperature;
+        }
     }
 }

@@ -34,6 +34,58 @@ namespace SpectralPathTracer
 
         /**
          * <summary>
+         * The weights of each wavelength bin for the scene's light as the eye sees it.
+         * </summary>
+         * <param name="light">The light's radiance at each nm from 360 to 830, 471 values.</param>
+         * <returns>The weights of each bin.</returns>
+         */
+        public static float[] LightWeights(float[] light)
+        {
+            var weights = new float[BinCount];
+            for (int i = 0; i < BinCount; i++)
+            {
+                Vector3 start = Cie.MatchingFunctions(Cie.FirstWavelength + i) * light[i];
+                Vector3 end = Cie.MatchingFunctions(Cie.FirstWavelength + i + 1) * light[i + 1];
+                weights[i] = 0.5f * (start.x + start.y + start.z + end.x + end.y + end.z); // trapezoid average
+            }
+
+
+            return weights;
+        }
+
+        /**
+         * <summary>
+         * Mixes the eye's weights with the light's, each normalized first so the share is a true fraction.
+         * </summary>
+         * <param name="visual">The eye's weights of each bin.</param>
+         * <param name="light">The light's weights of each bin.</param>
+         * <param name="lightShare">How much of the mix follows the light, from 0 to 1.</param>
+         * <returns>The mixed weights, summing to 1.</returns>
+         */
+        public static float[] Mix(float[] visual, float[] light, float lightShare)
+        {
+            double visualSum = 0.0;
+            double lightSum = 0.0;
+            for (int i = 0; i < BinCount; i++)
+            {
+                visualSum += visual[i];
+                lightSum += light[i];
+            }
+
+            // a scene without light has nothing to follow, so the eye takes the whole distribution
+            if (lightSum <= 0.0)
+                return visual;
+
+            var mixed = new float[BinCount];
+            for (int i = 0; i < BinCount; i++)
+                mixed[i] = (float)((1.0 - lightShare) * visual[i] / visualSum + lightShare * light[i] / lightSum);
+
+
+            return mixed;
+        }
+
+        /**
+         * <summary>
          * Mixes a small uniform floor into the given weights so every bin keeps a float-resolvable probability.
          * </summary>
          * <param name="weights">The weights of each bin.</param>

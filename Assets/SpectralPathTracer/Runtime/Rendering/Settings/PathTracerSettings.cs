@@ -56,6 +56,10 @@ namespace SpectralPathTracer
         [field: Range(360f, 830f)]
         [field: SerializeField] public float LockedWavelength { get; private set; } = 550f;
 
+        [field: Tooltip("How much of the wavelength distribution follows the scene's lights; the rest follows the eye.")]
+        [field: Range(0f, 1f)]
+        [field: SerializeField] public float LightShare { get; private set; } = 0.5f;
+
         [field: Tooltip("Stop accumulating after this many samples per pixel; 0 keeps going forever.")]
         [field: Min(0)]
         [field: SerializeField] public int TargetSamples { get; private set; } = 1024;
