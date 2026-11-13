@@ -22,6 +22,19 @@ namespace SpectralPathTracer
 
         /**
          * <summary>
+         * Evaluates a sigmoid spectrum together with its scale, the CPU twin of EvaluateSigmoid.
+         * </summary>
+         * <param name="spectrum">c0, c1 and c2 for a wavelength in nm in xyz, and the scale in w.</param>
+         * <param name="lambda">The wavelength in nm.</param>
+         * <returns>The scaled spectrum's value.</returns>
+         */
+        public static float EvaluateScaled(Vector4 spectrum, float lambda)
+        {
+            return Evaluate(spectrum, lambda) * spectrum.w;
+        }
+
+        /**
+         * <summary>
          * Squashes any real number into the range (0, 1).
          * </summary>
          * <param name="x">The number.</param>

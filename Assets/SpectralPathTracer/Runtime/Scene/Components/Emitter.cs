@@ -56,5 +56,17 @@ namespace SpectralPathTracer
         {
             TracedRegistry.MarkChanged();
         }
+
+        /**
+         * <summary>
+         * Returns the emitter component of a shape, if any, and only if it is enabled.
+         * </summary>
+         * <param name="shape">The shape.</param>
+         * <returns>The emitter, or null.</returns>
+         */
+        public static Emitter On(TracedShape shape)
+        {
+            return shape.TryGetComponent(out Emitter emitter) && emitter.enabled ? emitter : null;
+        }
     }
 }

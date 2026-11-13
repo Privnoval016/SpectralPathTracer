@@ -203,13 +203,13 @@ namespace SpectralPathTracer
                 _AspectRatio = renderParams.Camera.AspectRatio,
                 _OutputScale = renderParams.OutputScale,
 
-                _SkyZenithColor = _sceneCompiler.Sky.Zenith.linear,
-                _SkyHorizonColor = _sceneCompiler.Sky.Horizon.linear,
-                _SkyGroundColor = _sceneCompiler.Sky.Ground.linear,
+                _SkyZenithColor = _sceneCompiler.Sky.Colors.Zenith.linear,
+                _SkyHorizonColor = _sceneCompiler.Sky.Colors.Horizon.linear,
+                _SkyGroundColor = _sceneCompiler.Sky.Colors.Ground.linear,
 
-                _SkyZenithSpectrum = _sceneCompiler.SkyZenithSpectrum,
-                _SkyHorizonSpectrum = _sceneCompiler.SkyHorizonSpectrum,
-                _SkyGroundSpectrum = _sceneCompiler.SkyGroundSpectrum,
+                _SkyZenithSpectrum = _sceneCompiler.Sky.ZenithSpectrum,
+                _SkyHorizonSpectrum = _sceneCompiler.Sky.HorizonSpectrum,
+                _SkyGroundSpectrum = _sceneCompiler.Sky.GroundSpectrum,
 
                 _MaxBounces = (uint)renderParams.MaxBounces,
                 _PixelJitter = renderParams.PixelJitter ? 1u : 0u,

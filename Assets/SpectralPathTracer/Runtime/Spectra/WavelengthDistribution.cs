@@ -64,13 +64,8 @@ namespace SpectralPathTracer
          */
         public static float[] Mix(float[] visual, float[] light, float lightShare)
         {
-            double visualSum = 0.0;
-            double lightSum = 0.0;
-            for (int i = 0; i < BinCount; i++)
-            {
-                visualSum += visual[i];
-                lightSum += light[i];
-            }
+            double visualSum = Sum(visual);
+            double lightSum = Sum(light);
 
             // a scene without light has nothing to follow, so the eye takes the whole distribution
             if (lightSum <= 0.0)
@@ -93,9 +88,7 @@ namespace SpectralPathTracer
          */
         public static float[] WithUniformFloor(float[] weights)
         {
-            double sum = 0.0;
-            foreach (float weight in weights)
-                sum += weight;
+            double sum = Sum(weights);
 
             var mixed = new float[BinCount];
             for (int i = 0; i < BinCount; i++)
@@ -114,10 +107,8 @@ namespace SpectralPathTracer
          */
         public static float[] Cdf(float[] weights)
         {
-            double sum = 0.0;
-            foreach (float weight in weights)
-                sum += weight;
-            
+            double sum = Sum(weights);
+
             var cdf = new float[BinCount + 1];
             double cumulative = 0.0;
             for (int i = 0; i < BinCount; i++)
@@ -160,5 +151,20 @@ namespace SpectralPathTracer
 
             return Cie.FirstWavelength + bin + (u - cdf[bin]) / width; // the bin's start plus the fraction of the bin's width
         }
+
+        #region Helpers
+
+        // in double, so 470 small additions don't drift
+        private static double Sum(float[] weights)
+        {
+            double sum = 0.0;
+            foreach (float weight in weights)
+                sum += weight;
+
+
+            return sum;
+        }
+
+        #endregion
     }
 }
