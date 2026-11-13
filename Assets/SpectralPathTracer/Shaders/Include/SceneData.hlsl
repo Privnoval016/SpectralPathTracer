@@ -15,6 +15,7 @@
 StructuredBuffer<GpuObject> _Objects;
 StructuredBuffer<GpuMaterial> _Materials;
 StructuredBuffer<float> _Spectra; // measured spectra, SPECTRUMTABLES_COUNT values each
+StructuredBuffer<float> _WavelengthCdf; // the wavelength distribution's CDF, WAVELENGTH_BINS + 1 values from 0 to 1
 uint _ObjectCount;
 
 /**

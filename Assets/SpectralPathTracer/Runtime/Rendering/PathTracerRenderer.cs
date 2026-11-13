@@ -286,7 +286,7 @@ namespace SpectralPathTracer
         private void RecordWave(RenderGraph renderGraph, in FrameContext frame, in SceneBuffers scene, BufferHandle accumulation, BufferHandle livePaths, int waveStart)
         {
             int waveCount = Mathf.Min(WaveSize, frame.PixelCount - waveStart);
-            PathBuffers paths = _generateStage.Record(renderGraph, frame, waveStart, waveCount, _sampleCount);
+            PathBuffers paths = _generateStage.Record(renderGraph, frame, scene, waveStart, waveCount, _sampleCount);
 
             // depth 0 is the camera ray's hit, so N bounces take N + 1 passes
             for (int depth = 0; depth <= frame.MaxBounces; depth++)

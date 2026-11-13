@@ -32,6 +32,7 @@ namespace SpectralPathTracer
 
         private readonly List<float> _spectrumData = new List<float>(); // measured spectra, 95 values each
         private readonly GrowableBuffer<float> _spectrumTables = new GrowableBuffer<float>("PathTracerSpectra");
+        private readonly GrowableBuffer<float> _wavelengthCdf = new GrowableBuffer<float>("PathTracerWavelengthCdf");
 
         private int _builtVersion = -1;
         private int _defaultMaterialIndex = -1;
@@ -110,7 +111,7 @@ namespace SpectralPathTracer
          */
         public SceneBuffers Import(RenderGraph renderGraph)
         {
-            return new SceneBuffers(_objects.Import(renderGraph), _materials.Import(renderGraph), _spectrumTables.Import(renderGraph), ObjectCount);
+            return new SceneBuffers(_objects.Import(renderGraph), _materials.Import(renderGraph), _spectrumTables.Import(renderGraph), _wavelengthCdf.Import(renderGraph), ObjectCount);
         }
 
 
@@ -119,6 +120,7 @@ namespace SpectralPathTracer
             _objects.Dispose();
             _materials.Dispose();
             _spectrumTables.Dispose();
+            _wavelengthCdf.Dispose();
         }
 
         #region Helpers
@@ -283,6 +285,9 @@ namespace SpectralPathTracer
                 _spectrumData.Add(0f);
 
             _spectrumTables.Upload(_spectrumData);
+
+            // the eye's part only, until the scene's lights are mixed in
+            _wavelengthCdf.Upload(new List<float>(WavelengthDistribution.Cdf(WavelengthDistribution.WithUniformFloor(WavelengthDistribution.VisualWeights()))));
         }
 
         /**

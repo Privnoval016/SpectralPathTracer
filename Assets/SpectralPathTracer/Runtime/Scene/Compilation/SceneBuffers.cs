@@ -16,15 +16,17 @@ namespace SpectralPathTracer
         public BufferHandle Objects { get; }
         public BufferHandle Materials { get; }
         public BufferHandle Spectra { get; }
+        public BufferHandle WavelengthCdf { get; }
         public int ObjectCount { get; }
 
         #endregion
 
-        public SceneBuffers(BufferHandle objects, BufferHandle materials, BufferHandle spectra, int objectCount)
+        public SceneBuffers(BufferHandle objects, BufferHandle materials, BufferHandle spectra, BufferHandle wavelengthCdf, int objectCount)
         {
             Objects = objects;
             Materials = materials;
             Spectra = spectra;
+            WavelengthCdf = wavelengthCdf;
             ObjectCount = objectCount;
         }
 
@@ -39,6 +41,7 @@ namespace SpectralPathTracer
             builder.UseBuffer(Objects, AccessFlags.Read);
             builder.UseBuffer(Materials, AccessFlags.Read);
             builder.UseBuffer(Spectra, AccessFlags.Read);
+            builder.UseBuffer(WavelengthCdf, AccessFlags.Read);
         }
 
         /**
@@ -54,6 +57,7 @@ namespace SpectralPathTracer
             cmd.SetComputeBufferParam(shader, kernel, ShaderIDs.ObjectsID, Objects);
             cmd.SetComputeBufferParam(shader, kernel, ShaderIDs.MaterialsID, Materials);
             cmd.SetComputeBufferParam(shader, kernel, ShaderIDs.SpectraID, Spectra);
+            cmd.SetComputeBufferParam(shader, kernel, ShaderIDs.WavelengthCdfID, WavelengthCdf);
             cmd.SetComputeIntParam(shader, ShaderIDs.ObjectCountID, ObjectCount);
         }
     }

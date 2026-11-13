@@ -27,6 +27,7 @@ namespace SpectralPathTracer
         public static readonly int ObjectsID = Shader.PropertyToID("_Objects");
         public static readonly int MaterialsID = Shader.PropertyToID("_Materials");
         public static readonly int SpectraID = Shader.PropertyToID("_Spectra");
+        public static readonly int WavelengthCdfID = Shader.PropertyToID("_WavelengthCdf");
         public static readonly int SpectralAccumulationID = Shader.PropertyToID("_SpectralAccumulation");
         public static readonly int ObjectCountID = Shader.PropertyToID("_ObjectCount");
 

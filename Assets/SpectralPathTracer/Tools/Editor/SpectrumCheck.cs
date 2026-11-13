@@ -30,6 +30,7 @@ namespace SpectralPathTracer
 
 
             Report("flat Y by Monte Carlo", EstimateFlatY() / Cie.YIntegral, 1f, 0.02f);
+            Report("flat Y through the visual pdf", EstimateFlatYVisual() / Cie.YIntegral, 1f, 1e-3f);
 
 
             ReportFit("mid gray", new Vector3(0.5f, 0.5f, 0.5f));
@@ -235,6 +236,28 @@ namespace SpectralPathTracer
             for (int i = 0; i < MonteCarloSamples; i++)
             {
                 float lambda = Cie.FirstWavelength + (float)random.NextDouble() * range;
+                sum += Cie.MatchingFunctions(lambda).y / pdf;
+            }
+
+
+            return (float)(sum / MonteCarloSamples);
+        }
+
+        /**
+         * <summary>
+         * Estimates a flat spectrum's Y from wavelengths drawn by the eye's distribution, the way paths now draw them.
+         * </summary>
+         * <returns>The estimate of the integral of y-bar.</returns>
+         */
+        private static float EstimateFlatYVisual()
+        {
+            float[] cdf = WavelengthDistribution.Cdf(WavelengthDistribution.WithUniformFloor(WavelengthDistribution.VisualWeights()));
+
+            double sum = 0;
+            for (int i = 0; i < MonteCarloSamples; i++)
+            {
+                // evenly spaced u instead of random, so any mismatch between the draw and its pdf shows instead of hiding in noise
+                float lambda = WavelengthDistribution.Sample(cdf, (i + 0.5f) / MonteCarloSamples, out float pdf);
                 sum += Cie.MatchingFunctions(lambda).y / pdf;
             }
 

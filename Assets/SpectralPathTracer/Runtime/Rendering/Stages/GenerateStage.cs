@@ -30,6 +30,7 @@ namespace SpectralPathTracer
             public BufferHandle Constants;
             public LocalKeyword SpectralKeyword;
             public bool Spectral;
+            public SceneBuffers Scene;
         }
 
         public GenerateStage(ComputeShader shader) : base(shader, KernelName)
@@ -42,12 +43,13 @@ namespace SpectralPathTracer
          * </summary>
          * <param name="renderGraph">The render graph recording this frame.</param>
          * <param name="frame">This frame's context.</param>
+         * <param name="scene">The scene's buffers, imported this frame.</param>
          * <param name="waveStart">The first pixel the wave covers.</param>
          * <param name="count">How many pixels, and so path slots, the wave covers.</param>
          * <param name="sampleIndex">The sample the wave's paths belong to.</param>
          * <returns>The wave's buffers, valid for this frame's render graph.</returns>
          */
-        public PathBuffers Record(RenderGraph renderGraph, in FrameContext frame, int waveStart, int count, uint sampleIndex)
+        public PathBuffers Record(RenderGraph renderGraph, in FrameContext frame, in SceneBuffers scene, int waveStart, int count, uint sampleIndex)
         {
             var desc = new BufferDesc(count, UnsafeUtility.SizeOf<GpuRay>(), GraphicsBuffer.Target.Structured) { name = "PathTracerRays" };
             BufferHandle rays = renderGraph.CreateBuffer(desc);
@@ -87,6 +89,7 @@ namespace SpectralPathTracer
             passData.Constants = frame.Constants;
             passData.SpectralKeyword = SpectralKeyword;
             passData.Spectral = frame.Spectral;
+            passData.Scene = scene;
 
             builder.UseBuffer(rays, AccessFlags.Write);
             builder.UseBuffer(paths, AccessFlags.Write);
@@ -94,6 +97,7 @@ namespace SpectralPathTracer
             builder.UseBuffer(counters, AccessFlags.Write);
             builder.UseBuffer(args, AccessFlags.Write);
             builder.UseBuffer(frame.Constants, AccessFlags.Read);
+            scene.Declare(builder); // spectral paths draw their wavelength from the scene's distribution
             builder.AllowGlobalStateModification(true); // the keyword is state on the shader, outside the graph's resources
 
             // static to reject captured variables from the outer scope
@@ -111,6 +115,7 @@ namespace SpectralPathTracer
                 cmd.SetComputeIntParam(data.Shader, ShaderIDs.RayCountID, data.RayCount);
                 cmd.SetComputeIntParam(data.Shader, ShaderIDs.SampleIndexID, (int)data.SampleIndex); // the bits arrive unchanged in the uint uniform
                 SetFrameConstants(cmd, data.Shader, data.Constants);
+                data.Scene.Bind(cmd, data.Shader, data.Kernel);
                 cmd.DispatchCompute(data.Shader, data.Kernel, data.Groups, 1, 1);
             });
 
