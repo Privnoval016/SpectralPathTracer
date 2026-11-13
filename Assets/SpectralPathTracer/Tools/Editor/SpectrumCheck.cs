@@ -49,6 +49,58 @@ namespace SpectralPathTracer
             ReportMeasured("White");
             ReportMeasured("Red");
             ReportMeasured("Green");
+
+
+            // Planck's law: the color near D65's temperature, Wien's peak, and the luminance every temperature is held at
+            Vector3 warmWhite = Blackbody.Rgb(6504f);
+            Report("6504 K red at Y = 1", warmWhite.x, 1.043f, 2e-3f);
+            Report("6504 K green at Y = 1", warmWhite.y, 0.984f, 2e-3f);
+            Report("6504 K blue at Y = 1", warmWhite.z, 1.036f, 2e-3f);
+            Report("Wien peak at 1800 K, nm", PeakWavelength(1800f), Blackbody.WienConstant / 1800f, 1f);
+
+            foreach (float kelvin in new[] { 1800f, 6504f, 10000f })
+                Report($"{kelvin} K luminance on the GPU grid", TableLuminance(Blackbody.Resample(kelvin, 1f)), 1f, 2e-3f);
+        }
+
+        /**
+         * <summary>
+         * Finds where Planck's curve peaks by scanning it, to compare with Wien's law.
+         * </summary>
+         * <param name="kelvin">The temperature in kelvin.</param>
+         * <returns>The brightest wavelength in nm, to the nearest nm.</returns>
+         */
+        private static float PeakWavelength(float kelvin)
+        {
+            int peak = 100;
+            for (int lambda = 100; lambda <= 5000; lambda++)
+            {
+                if (Blackbody.Radiance(lambda, kelvin) > Blackbody.Radiance(peak, kelvin))
+                    peak = lambda;
+            }
+
+
+            return peak;
+        }
+
+        /**
+         * <summary>
+         * The luminance Y a table on the 5 nm GPU grid has, interpolated the way the GPU reads it.
+         * </summary>
+         * <param name="values">One value every 5 nm from 360 to 830 nm.</param>
+         * <returns>The table's Y.</returns>
+         */
+        private static float TableLuminance(float[] values)
+        {
+            float y = 0f;
+            for (int lambda = Cie.FirstWavelength; lambda <= Cie.LastWavelength; lambda++)
+            {
+                float position = (lambda - (int)SpectrumTables.FirstWavelength) / (float)(int)SpectrumTables.Step;
+                int row = Mathf.Min((int)position, values.Length - 2);
+                y += Mathf.Lerp(values[row], values[row + 1], position - row) * Cie.MatchingFunctions(lambda).y;
+            }
+
+
+            return y / Cie.YIntegral;
         }
 
         /**

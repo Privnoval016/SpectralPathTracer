@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering.RenderGraphModule;
@@ -24,6 +25,7 @@ namespace SpectralPathTracer
         private readonly Dictionary<SpectralMaterial, int> _materialIndices = new Dictionary<SpectralMaterial, int>();
 
         private readonly List<Matrix4x4> _cachedTransforms = new List<Matrix4x4>();
+        private readonly List<EmitterState?> _cachedEmitters = new List<EmitterState?>();
 
         private readonly GrowableBuffer<GpuObject> _objects = new GrowableBuffer<GpuObject>("PathTracerObjects");
         private readonly GrowableBuffer<GpuMaterial> _materials = new GrowableBuffer<GpuMaterial>("PathTracerMaterials");
@@ -36,7 +38,7 @@ namespace SpectralPathTracer
 
         private bool _reportedMultipleSkies;
 
-        private readonly SigmoidTable _sigmoidTable; // null when no table is assigned, which leaves every spectrum black
+        private readonly SigmoidTable _sigmoidTable; // null when no table is assigned which leaves every spectrum black
 
         #endregion
 
@@ -140,6 +142,10 @@ namespace SpectralPathTracer
             {
                 if (shapes[i].transform.localToWorldMatrix != _cachedTransforms[i])
                     return true;
+
+                // Timeline sets an emitter's fields without OnValidate, so its values are compared like transforms
+                if (!Nullable.Equals(StateOf(shapes[i]), _cachedEmitters[i]))
+                    return true;
             }
 
             return false;
@@ -164,7 +170,7 @@ namespace SpectralPathTracer
                     Quadric = shape.WorldQuadric,
                     WorldToLocal = shape.WorldToShape,
                     Type = (int)shape.Type,
-                    MaterialIndex = MaterialIndex(shape.Material),
+                    MaterialIndex = EmitterOf(shape) is Emitter emitter ? AddEmitterMaterial(shape.Material, emitter) : MaterialIndex(shape.Material),
                     LightId = -1, // no light table yet
                     MediumIn = -1,
                     MediumOut = -1
@@ -184,33 +190,57 @@ namespace SpectralPathTracer
             if (material == null)
             {
                 if (_defaultMaterialIndex < 0)
-                    _defaultMaterialIndex = AddMaterial(SpectralMaterial.DefaultAlbedo, Color.black, 0f, null, null);
+                    _defaultMaterialIndex = AddMaterial(SpectralMaterial.DefaultAlbedo, null, Vector3.zero, null);
 
                 return _defaultMaterialIndex;
             }
 
             if (!_materialIndices.TryGetValue(material, out int index))
             {
-                index = AddMaterial(material.Albedo, material.EmissionColor, material.EmissionStrength, material.ReflectanceSpectrum, material.EmissionSpectrum);
+                (Vector3 emissionRgb, float[] emissionTable) = MaterialEmission(material);
+                index = AddMaterial(material.Albedo, material.ReflectanceSpectrum, emissionRgb, emissionTable);
                 _materialIndices.Add(material, index);
             }
 
             return index;
         }
 
-        private int AddMaterial(Color albedo, Color emissionColor, float emissionStrength, MeasuredSpectrum reflectance, MeasuredSpectrum emission)
+        /**
+         * <summary>
+         * A shape's own material entry, with its emitter's light in place of the material's emission.
+         * </summary>
+         * <param name="material">The shape's material, or null for the default.</param>
+         * <param name="emitter">The shape's emitter.</param>
+         * <returns>The new entry's index.</returns>
+         */
+        private int AddEmitterMaterial(SpectralMaterial material, Emitter emitter)
+        {
+            (Vector3 emissionRgb, float[] emissionTable) = EmitterEmission(emitter);
+
+
+            return material != null
+                ? AddMaterial(material.Albedo, material.ReflectanceSpectrum, emissionRgb, emissionTable)
+                : AddMaterial(SpectralMaterial.DefaultAlbedo, null, emissionRgb, emissionTable);
+        }
+
+        /**
+         * <summary>
+         * Adds one material entry from an albedo and an already resolved emission.
+         * </summary>
+         * <param name="albedo">The picker albedo, used when there is no measured reflectance.</param>
+         * <param name="reflectance">A measured reflectance, or null.</param>
+         * <param name="emissionRgb">The emission's linear sRGB color, for RGB mode and the sigmoid.</param>
+         * <param name="emissionTable">The emission resampled for the GPU, or null to use the sigmoid.</param>
+         * <returns>The entry's index.</returns>
+         */
+        private int AddMaterial(Color albedo, MeasuredSpectrum reflectance, Vector3 emissionRgb, float[] emissionTable)
         {
             Color linearAlbedo = albedo.linear;
-            Color linearEmission = emissionColor.linear * emissionStrength;
             var albedoRgb = new Vector3(linearAlbedo.r, linearAlbedo.g, linearAlbedo.b);
-            var emissionRgb = new Vector3(linearEmission.r, linearEmission.g, linearEmission.b);
 
             // a measured spectrum replaces the picker color in both modes, so RGB mode shows the same material
             if (reflectance != null)
                 albedoRgb = reflectance.ReflectanceRgb();
-
-            if (emission != null)
-                emissionRgb = emission.EmissionRgb() * emissionStrength;
 
 
             _materialData.Add(new GpuMaterial
@@ -222,7 +252,7 @@ namespace SpectralPathTracer
                 Type = (int)MaterialType.Lambert,
 
                 ReflectanceTable = reflectance != null ? AddSpectrumTable(reflectance.Resample()) : -1,
-                EmissionTable = emission != null ? AddSpectrumTable(emission.Resample(emission.EmissionNormalization() * emissionStrength)) : -1
+                EmissionTable = emissionTable != null ? AddSpectrumTable(emissionTable) : -1
             });
             return _materialData.Count - 1;
         }
@@ -284,11 +314,89 @@ namespace SpectralPathTracer
         private void CacheTransforms()
         {
             _cachedTransforms.Clear();
+            _cachedEmitters.Clear();
 
             // indexing a read-only list skips the boxed enumerator foreach would allocate
             IReadOnlyList<TracedShape> shapes = TracedRegistry.Shapes;
             for (int i = 0; i < shapes.Count; i++)
+            {
                 _cachedTransforms.Add(shapes[i].transform.localToWorldMatrix);
+                _cachedEmitters.Add(StateOf(shapes[i]));
+            }
+        }
+
+        /**
+         * <summary>
+         * Returns the emitter component of a shape, if any, and only if it is enabled.
+         * </summary>
+         * <param name="shape">The shape.</param>
+         * <returns>The emitter, or null.</returns>
+         */
+        private static Emitter EmitterOf(TracedShape shape)
+        {
+            return shape.TryGetComponent(out Emitter emitter) && emitter.enabled ? emitter : null;
+        }
+
+        /**
+         * <summary>
+         * Returns the state of a shape's emitter, if any, and only if it is enabled.
+         * </summary>
+         * <param name="shape">The shape.</param>
+         * <returns>The emitter's state, or null.</returns>
+         */
+        private static EmitterState? StateOf(TracedShape shape)
+        {
+            return EmitterOf(shape)?.State;
+        }
+
+        /**
+         * <summary>
+         * A material's emission as a color and, for a measured spectrum, a table.
+         * </summary>
+         * <param name="material">The material.</param>
+         * <returns>The linear sRGB color and the table, or null for the sigmoid.</returns>
+         */
+        private static (Vector3, float[]) MaterialEmission(SpectralMaterial material)
+        {
+            float strength = material.EmissionStrength;
+            if (material.EmissionSpectrum != null)
+                return (material.EmissionSpectrum.EmissionRgb() * strength, material.EmissionSpectrum.Resample(material.EmissionSpectrum.EmissionNormalization() * strength));
+
+            Color linear = material.EmissionColor.linear * strength;
+
+
+            return (new Vector3(linear.r, linear.g, linear.b), null);
+        }
+
+        /**
+         * <summary>
+         * An emitter's emission as a color and, for a measured spectrum, a table.
+         * </summary>
+         * <param name="emitter">The emitter.</param>
+         * <returns>The linear sRGB color and the table, or null for the sigmoid.</returns>
+         */
+        private static (Vector3, float[]) EmitterEmission(Emitter emitter)
+        {
+            float strength = emitter.Strength;
+            switch (emitter.Kind)
+            {
+                case EmissionKind.Blackbody:
+                    return (Blackbody.Rgb(emitter.Temperature) * strength, Blackbody.Resample(emitter.Temperature, strength));
+
+                case EmissionKind.Measured when emitter.Spectrum != null:
+                    return (emitter.Spectrum.EmissionRgb() * strength, emitter.Spectrum.Resample(emitter.Spectrum.EmissionNormalization() * strength));
+
+                default:
+                {
+                    // the color scaled to Y = 1 first, so strength means the same thing for every kind
+                    Color linear = emitter.Color.linear;
+                    var rgb = new Vector3(linear.r, linear.g, linear.b);
+                    float y = Cie.LinearSrgbToXyz(rgb).y;
+
+
+                    return (y > 0f ? rgb / y * strength : Vector3.zero, null);
+                }
+            }
         }
 
         #endregion
