@@ -25,7 +25,7 @@ flowchart TD
     subgraph AUTHOR["Authored or measured"]
         picker["Picker color<br/>encoded sRGB"]
         measured["MeasuredSpectrum<br/>curve over nm, from CSV or drawn"]
-        emitter["Emitter on a shape<br/>blackbody at T, measured or color,<br/>strength as luminance Y"]
+        emitter["Emitter on a shape<br/>blackbody at T, measured, lines or color,<br/>strength as luminance Y"]
     end
 
     subgraph CPU["CPU, when the scene compiles"]
@@ -35,7 +35,8 @@ flowchart TD
         resample["Resample<br/>360 to 830 nm every 5 nm,<br/>lights normalized to Y = 1 times strength"]
         tocolor["Spectrum to linear sRGB<br/>integrate with D65 and the CMFs,<br/>then the XYZ to sRGB matrix"]
         planck["Blackbody<br/>Planck at T, scaled to Y = strength,<br/>resampled every 5 nm and integrated to a color"]
-        cdf["WavelengthTable<br/>eye (x + y + z) mixed with every light<br/>by Light Share, 1% uniform floor, as a CDF"]
+        cdf["WavelengthTable<br/>eye (x + y + z) mixed with every light<br/>by Light Share, 1% uniform floor,<br/>23,500 bins of 0.02 nm, as a CDF"]
+        gauss["LineSpectrum<br/>Gaussian lines at the emitter's luminance,<br/>color integrated in sigma / 8 steps"]
     end
 
     subgraph GPU_RGB["GPU, RGB mode"]
@@ -62,6 +63,10 @@ flowchart TD
     emitter -- "blackbody" --> planck
     emitter -- "measured" --> resample
     emitter -- "color, at Y = strength" --> fit
+    emitter -- "lines" --> gauss
+    gauss -- "line buffer" --> evaluate
+    gauss -- "each line's area per bin, with erf" --> cdf
+    gauss -- "emission color" --> rgbpath
     planck -- "emission color" --> rgbpath
     planck -- "spectrum buffer" --> evaluate
     planck -- "emission at each nm" --> cdf
@@ -85,7 +90,7 @@ HLSL include. Both read the C# tables in `Cie`, so the CPU and the GPU use the s
 |---|---|---|
 | Decode encoded sRGB | $c \le 0.04045:\ c/12.92$, else $\left(\frac{c + 0.055}{1.055}\right)^{2.4}$ | `Color.linear` in `SceneCompiler` |
 | Spectrum to XYZ | $\mathrm{XYZ} = \int L(\lambda)\,\big(\bar x, \bar y, \bar z\big)(\lambda)\,d\lambda \,/\, \int \bar y\,d\lambda$ | `Cie.MatchingFunctions`, `MatchingFunctions` in `Cie.hlsl` |
-| Wavelength pdf | $p_i = w_i / \sum w$ per 1 nm bin, $w = 0.99\,[(1 - \alpha)\,v/\sum v + \alpha\,\ell/\sum \ell] + 0.01/470$, eye $v = \bar x + \bar y + \bar z$, light $\ell = L\,(\bar x + \bar y + \bar z)$ | `WavelengthDistribution`, `SampleWavelengthCdf` |
+| Wavelength pdf | $p_i = w_i / (0.02 \sum w)$ per nm in 0.02 nm bins, $w = 0.99\,[(1 - \alpha)\,v/\sum v + \alpha\,\ell/\sum \ell] + 0.01/470$, eye $v = \bar x + \bar y + \bar z$, light $\ell = L\,(\bar x + \bar y + \bar z)$ | `WavelengthDistribution`, `SampleWavelengthCdf` |
 | One sample's XYZ | $\frac{1}{4}\sum_i L(\lambda_i)\,\bar{\mathbf x}(\lambda_i)/p(\lambda_i) \,/\, \int \bar y$ | `SpectrumToColor` in `SampledSpectrum.hlsl` |
 | XYZ to linear sRGB | the 3x3 matrix from sRGB's primaries and D65 | `Cie.XyzToLinearSrgb`, `XYZ_TO_SRGB` |
 | Linear sRGB to XYZ | that matrix's inverse | `Cie.LinearSrgbToXyz` |
@@ -94,6 +99,7 @@ HLSL include. Both read the C# tables in `Cie`, so the CPU and the GPU use the s
 | Sigmoid spectrum | $s(\lambda) = \frac{1}{2} + \frac{x}{2\sqrt{1 + x^2}},\ x = c_0\lambda^2 + c_1\lambda + c_2$ | `EvaluateSigmoid`, `SigmoidSpectrum.Evaluate` |
 | Color to coefficients | trilinear lookup by largest channel, its value and the two ratios | `SigmoidTable.Lookup` |
 | Light shape | coefficients of $\text{rgb} / 2\max$, times the scale $2\max$, times $D65(\lambda) \cdot \texttt{CIE\_D65\_SCALE}$ | `SigmoidTable.Unbounded`, `EmissionSpectrum` |
+| Line | peak $\frac{s_i}{S}\frac{k}{\sigma\sqrt{2\pi}}$, $\sigma = 0.4247\,\text{FWHM}$; its share of a bin $[a, b]$ is $A\,[\Phi(\frac{b-c}{\sigma}) - \Phi(\frac{a-c}{\sigma})]$ | `LineSpectrum.GpuLines`, `LinesAt`, `WavelengthDistribution.LightWeights` |
 | Blackbody | $B(\lambda, T) = \frac{2hc^2}{\lambda^5}\,\frac{1}{e^{hc/\lambda k T} - 1}$, peaking at $2.898 \times 10^6 / T$ nm | `Blackbody.Radiance` |
 | Light at a luminance | scale by $\text{Strength}\cdot\int\bar y \,/\, \int B\,\bar y$, so $Y = \text{Strength}$ at every temperature | `Blackbody.Resample`, `Blackbody.Rgb` |
 | XYZ to CIELAB | $L^* = 116 f(Y/Y_w) - 16$, $a^* = 500\,(f(X/X_w) - f(Y/Y_w))$, $b^* = 200\,(f(Y/Y_w) - f(Z/Z_w))$, $f$ a cube root | `SigmoidFit.Lab` |
@@ -112,6 +118,8 @@ HLSL include. Both read the C# tables in `Cie`, so the CPU and the GPU use the s
   white only reaches 0.99986, which the locked furnace exposed.
 - An `Emitter`'s light has luminance $Y$ equal to its Strength whatever its kind, temperature or color, and RGB mode
   uses the color its spectrum integrates to, so the light itself matches across modes and only bounces differ.
+- Lines are never read at whole nanometres: the table integrates each one into its bins with `erf`, and they must be
+  at least 0.05 nm wide (2.5 bins). The bin count is the generated `WavelengthBins` enum, read by C# and the shader.
 - The wavelength pdf may have any shape as long as it is positive wherever light can be seen, which the eye's half
   and the 1% floor guarantee, and every sample divides by the probability of the bin it was drawn from. Changing Light
   Share or stratification changes the noise, never the converged image.
@@ -120,4 +128,4 @@ HLSL include. Both read the C# tables in `Cie`, so the CPU and the GPU use the s
   Generate CIE Shader Table after changing it, and rebuild the sigmoid table with Build Sigmoid Table after changing
   the fit.
 
-The checkpoint devlogs cp-25, cp-26, cp-29 and cp-30 in `Docs/Checkpoints` explain the math step by step.
+The checkpoint devlogs cp-25, cp-26, cp-29, cp-30 and cp-31 in `Docs/Checkpoints` explain the math step by step.

@@ -103,6 +103,9 @@ Each line logs PASS, or an error on FAIL. It needs no scene.
 | Planck's peak at 1800 K, scanned | Wien's $2.898 \times 10^6 / 1800 = 1610$ nm, within 1 nm | a wrong exponent or unit |
 | Flat $Y$ through the eye's wavelength pdf, evenly spaced $u$ | exactly 1, within $10^{-3}$ | a CDF, search or pdf that disagree |
 | $Y$ of a blackbody resampled on the 5 nm grid at 1800, 6504, 10,000 K | 1, within $2 \times 10^{-3}$ | a broken luminance scale or resample |
+| Sodium's color at $Y = 1$ | (2.772, 0.587, -0.128), the matching functions at its line centers 2 to 1 | a broken line integral or normalization |
+| Sodium's line areas | exactly 1 | a wrong peak for a given width |
+| Sodium's $Y$ through a table built from its own lines, evenly spaced $u$ | 1, within $10^{-3}$ | `erf` weights, the 0.02 nm search or the pdf disagreeing |
 
 It also notes, without judging, how far the measured Cornell walls are from the hand-picked Cornell colors.
 
