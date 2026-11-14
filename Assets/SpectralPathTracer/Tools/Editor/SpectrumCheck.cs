@@ -71,6 +71,7 @@ namespace SpectralPathTracer
             Report("sodium green at Y = 1", sodiumRgb.y, 0.587f, 2e-3f);
             Report("sodium blue at Y = 1", sodiumRgb.z, -0.128f, 2e-3f);
             Report("sodium lines' total area", LineArea(sodium.GpuLines()), 1f, 1e-5f);
+            Report("sodium Y through its own table", EstimateLinesY(sodium), 1f, 1e-3f);
         }
 
         /**
@@ -273,6 +274,35 @@ namespace SpectralPathTracer
 
 
             return (float)(sum / MonteCarloSamples);
+        }
+
+        /**
+         * <summary>
+         * Estimates a line lamp's Y through a table built from that lamp alone, the way paths draw under it.
+         * </summary>
+         * <param name="lamp">The lamp's lines.</param>
+         * <returns>The estimated Y, 1 if the lines' weights, the search and the pdf agree.</returns>
+         */
+        private static float EstimateLinesY(LineSpectrum lamp)
+        {
+            var lines = new System.Collections.Generic.List<Vector4>(lamp.GpuLines(lamp.EmissionNormalization()));
+            float[] light = WavelengthDistribution.LightWeights(new float[Cie.SampleCount], lines);
+            float[] cdf = WavelengthDistribution.Cdf(WavelengthDistribution.WithUniformFloor(WavelengthDistribution.Mix(WavelengthDistribution.VisualWeights(), light, 1f)));
+
+            double sum = 0;
+            for (int i = 0; i < MonteCarloSamples; i++)
+            {
+                // evenly spaced u, so a mismatch shows instead of hiding in noise
+                float lambda = WavelengthDistribution.Sample(cdf, (i + 0.5f) / MonteCarloSamples, out float pdf);
+                float radiance = 0f;
+                foreach (Vector4 line in lines)
+                    radiance += LineSpectrum.Gaussian(line, lambda);
+
+                sum += radiance * Cie.MatchingFunctions(lambda).y / pdf;
+            }
+
+
+            return (float)(sum / MonteCarloSamples / Cie.YIntegral);
         }
 
         /**

@@ -93,6 +93,24 @@ namespace SpectralPathTracer
             return SigmoidSpectrum.EvaluateScaled(material.EmissionSpectrum, lambda) * Cie.D65At(lambda) * d65Scale;
         }
 
+        public bool HasLines(int index)
+        {
+            return _materialData[index].LineCount > 0;
+        }
+
+        /**
+         * <summary>
+         * A material entry's lines, as (center, sigma, peak, 0).
+         * </summary>
+         * <param name="index">The entry's index.</param>
+         * <returns>The entry's lines, empty if it has none.</returns>
+         */
+        public List<Vector4> LinesOf(int index)
+        {
+            GpuMaterial material = _materialData[index];
+            return _lineData.GetRange(material.LineStart, material.LineCount);
+        }
+
         public void Upload()
         {
             // the material buffer needs to hold at least one record

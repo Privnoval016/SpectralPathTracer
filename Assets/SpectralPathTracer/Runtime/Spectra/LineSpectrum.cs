@@ -11,7 +11,7 @@ namespace SpectralPathTracer
         public float Center;
 
         [Tooltip("The line's full width at half its peak, in nm.")]
-        [Min(0.01f)]
+        [Min(0.05f)]
         public float Width;
 
         [Tooltip("The line's share of the lamp's power, relative to the other lines.")]
@@ -27,7 +27,7 @@ namespace SpectralPathTracer
 
         private const float WidthToSigma = 0.4246609f; // 1 / (2 sqrt(2 ln 2)) a Gaussian's full width at half maximum = 2.355 sigma
         private const int StepsPerSigma = 8; // enough that the sum matches the Gaussian's integral to 1e-6
-        private const float ReachInSigmas = 6f; // 1 - 2e-9 of a Gaussian's area lies within 6 sigma of the center
+        public const float ReachInSigmas = 6f; // 1 - 2e-9 of a Gaussian's area lies within 6 sigma of the center
 
         #endregion
 

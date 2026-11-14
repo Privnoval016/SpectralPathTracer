@@ -11,7 +11,8 @@
 #include "../SceneData.hlsl"
 #include "Cie.hlsl"
 
-static const uint WAVELENGTH_BINS = CIE_SAMPLE_COUNT - 1u; // one bin per nm
+static const uint WAVELENGTH_BINS = WAVELENGTHBINS_COUNT; // from the WavelengthBins enum, so the CPU and the GPU can't disagree
+static const float WAVELENGTH_BIN_WIDTH = 1.0f / WAVELENGTHBINS_PER_NM; // nm
 
 struct SampledWavelengths
 {
@@ -44,10 +45,10 @@ float SampleWavelengthCdf(float u, out float pdf)
     uint bin = low - 1u; // cdf[0] = 0 <= u, so low is at least 1
     float start = _WavelengthCdf[bin];
     float width = _WavelengthCdf[bin + 1u] - start;
-    pdf = width; // the bin's probability over its 1 nm width
+    pdf = width / WAVELENGTH_BIN_WIDTH; // the bin's probability per nm
 
 
-    return CIE_FIRST_WAVELENGTH + bin + (u - start) / width;
+    return CIE_FIRST_WAVELENGTH + (bin + (u - start) / width) * WAVELENGTH_BIN_WIDTH;
 }
 
 /**

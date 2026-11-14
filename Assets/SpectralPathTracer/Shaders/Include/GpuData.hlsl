@@ -27,5 +27,6 @@
 #include "../../Runtime/Scene/GpuData/GpuObject.cs.hlsl"
 #include "../../Runtime/Scene/GpuData/GpuMaterial.cs.hlsl"
 #include "../../Runtime/Scene/GpuData/SpectrumTables.cs.hlsl"
+#include "../../Runtime/Scene/GpuData/WavelengthBins.cs.hlsl"
 
 #endif

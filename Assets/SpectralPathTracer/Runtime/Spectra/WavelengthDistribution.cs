@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace SpectralPathTracer
@@ -7,7 +8,9 @@ namespace SpectralPathTracer
     {
         #region Constants
 
-        public const int BinCount = Cie.SampleCount - 1; // pigeonhole bins between the CIE samples
+        public const int BinsPerNm = (int)WavelengthBins.PerNm; // shared with the GPU through the generated enum
+        public const float BinWidth = 1f / BinsPerNm; // 0.02 nm
+        public const int BinCount = (int)WavelengthBins.Count; // pigeonhole bins between the CIE samples
 
         public const float UniformShare = 0.01f; // how much of the distribution is uniformly spread across all bins
 
@@ -22,11 +25,7 @@ namespace SpectralPathTracer
         {
             var weights = new float[BinCount];
             for (int i = 0; i < BinCount; i++)
-            {
-                Vector3 start = Cie.MatchingFunctions(Cie.FirstWavelength + i);
-                Vector3 end = Cie.MatchingFunctions(Cie.FirstWavelength + i + 1);
-                weights[i] = 0.5f * (start.x + start.y + start.z + end.x + end.y + end.z); // trapezoid average
-            }
+                weights[i] = 0.5f * (EyeAt(BinStart(i)) + EyeAt(BinStart(i + 1))); // trapezoid average
 
 
             return weights;
@@ -34,19 +33,33 @@ namespace SpectralPathTracer
 
         /**
          * <summary>
-         * The weights of each wavelength bin for the scene's light as the eye sees it.
+         * The weights of each wavelength bin for the scene's light as the eye sees it, with lines integrated exactly.
          * </summary>
-         * <param name="light">The light's radiance at each nm from 360 to 830, 471 values.</param>
+         * <param name="smoothLight">The smooth lights' radiance at each nm from 360 to 830, 471 values.</param>
+         * <param name="lines">Every line in the scene as (center, sigma, peak, 0).</param>
          * <returns>The weights of each bin.</returns>
          */
-        public static float[] LightWeights(float[] light)
+        public static float[] LightWeights(float[] smoothLight, List<Vector4> lines)
         {
             var weights = new float[BinCount];
             for (int i = 0; i < BinCount; i++)
             {
-                Vector3 start = Cie.MatchingFunctions(Cie.FirstWavelength + i) * light[i];
-                Vector3 end = Cie.MatchingFunctions(Cie.FirstWavelength + i + 1) * light[i + 1];
-                weights[i] = 0.5f * (start.x + start.y + start.z + end.x + end.y + end.z); // trapezoid average
+                float start = BinStart(i);
+                float end = BinStart(i + 1);
+                weights[i] = 0.5f * (SmoothAt(smoothLight, start) * EyeAt(start) + SmoothAt(smoothLight, end) * EyeAt(end)) * BinWidth; // trapezoid average
+            }
+
+            // a line's share of each bin is its area between the bin's edges
+            foreach (Vector4 line in lines)
+            {
+                float area = line.z * line.y * Mathf.Sqrt(2f * Mathf.PI);
+                int first = BinOf(line.x - LineSpectrum.ReachInSigmas * line.y);
+                int last = BinOf(line.x + LineSpectrum.ReachInSigmas * line.y);
+                for (int i = first; i <= last; i++)
+                {
+                    float inside = Normal((BinStart(i + 1) - line.x) / line.y) - Normal((BinStart(i) - line.x) / line.y);
+                    weights[i] += area * inside * EyeAt(BinStart(i) + 0.5f * BinWidth);
+                }
             }
 
 
@@ -147,14 +160,14 @@ namespace SpectralPathTracer
 
             int bin = low - 1; // cdf[0] = 0 <= u, so low is at least 1
             float width = cdf[bin + 1] - cdf[bin];
-            pdf = width;
+            pdf = width / BinWidth; // the bin's probability per nm
 
-            return Cie.FirstWavelength + bin + (u - cdf[bin]) / width; // the bin's start plus the fraction of the bin's width
+            return Cie.FirstWavelength + (bin + (u - cdf[bin]) / width) * BinWidth; // the bin's start plus the fraction of the bin's width
         }
 
         #region Helpers
 
-        // in double, so 470 small additions don't drift
+        // in double, so 23,500 small additions don't drift
         private static double Sum(float[] weights)
         {
             double sum = 0.0;
@@ -163,6 +176,58 @@ namespace SpectralPathTracer
 
 
             return sum;
+        }
+
+        private static float BinStart(int bin)
+        {
+            return Cie.FirstWavelength + bin * BinWidth;
+        }
+
+        private static int BinOf(float lambda)
+        {
+            return Mathf.Clamp(Mathf.FloorToInt((lambda - Cie.FirstWavelength) / BinWidth), 0, BinCount - 1);
+        }
+
+        // how strongly any of the three matching functions responds at a wavelength
+        private static float EyeAt(float lambda)
+        {
+            Vector3 cmf = Cie.MatchingFunctions(lambda);
+            return cmf.x + cmf.y + cmf.z;
+        }
+
+        // the smooth lights between their whole nm readings
+        private static float SmoothAt(float[] smoothLight, float lambda)
+        {
+            float position = Mathf.Clamp(lambda - Cie.FirstWavelength, 0f, smoothLight.Length - 1);
+            int row = Mathf.Min((int)position, smoothLight.Length - 2);
+
+
+            return Mathf.Lerp(smoothLight[row], smoothLight[row + 1], position - row);
+        }
+
+        /**
+         * <summary>
+         * The share of a unit Gaussian's area below x sigmas, the standard normal CDF.
+         * </summary>
+         * <param name="x">The distance from the center in sigmas.</param>
+         * <returns>The area below x, from 0 to 1.</returns>
+         */
+        private static float Normal(float x)
+        {
+            return 0.5f * (1f + Erf(x / Mathf.Sqrt(2f)));
+        }
+
+        // gaussian error function
+        private static float Erf(float x)
+        {
+            float sign = Mathf.Sign(x);
+            x = Mathf.Abs(x);
+
+            float t = 1f / (1f + 0.3275911f * x);
+            float polynomial = ((((1.061405429f * t - 1.453152027f) * t + 1.421413741f) * t - 0.284496736f) * t + 0.254829592f) * t;
+
+
+            return sign * (1f - polynomial * Mathf.Exp(-x * x));
         }
 
         #endregion
