@@ -51,11 +51,11 @@ namespace SpectralPathTracer
             if (!TryResolve(out SkyColors sky))
                 return false;
 
-            // sky colors change without a version bump, so compare them directly; Equals is exact, where == isn't
+            // sky colors change without a version bump so compare them directly
             changed = !sky.Zenith.Equals(Colors.Zenith) || !sky.Horizon.Equals(Colors.Horizon) || !sky.Ground.Equals(Colors.Ground);
             Colors = sky;
 
-            // the sky is a light, so its colors become unbounded spectra once per change
+            // the sky is a light so its colors become unbounded spectra once per change
             if (changed)
             {
                 ZenithSpectrum = Unbounded(sky.Zenith.linear);
@@ -68,7 +68,7 @@ namespace SpectralPathTracer
 
         /**
          * <summary>
-         * The sky's radiance at one wavelength, its three colors averaged, since one table can't follow direction.
+         * The sky's radiance at one wavelength with its three colors averaged.
          * </summary>
          * <param name="lambda">The wavelength in nm.</param>
          * <param name="d65Scale">The factor that puts D65 at Y = 1.</param>

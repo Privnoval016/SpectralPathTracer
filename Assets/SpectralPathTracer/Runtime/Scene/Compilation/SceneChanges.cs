@@ -6,7 +6,7 @@ namespace SpectralPathTracer
 {
     /**
      * <summary>
-     * Remembers what the last scene build saw, so the compiler rebuilds only when something changed.
+     * Stores what the last scene build saw so the compiler rebuilds only when something changed.
      * </summary>
      */
     public class SceneChanges
@@ -38,11 +38,9 @@ namespace SpectralPathTracer
 
             for (int i = 0; i < shapes.Count; i++)
             {
-                // Equals is exact, where == would miss a slowly animated step under 1e-5
-                if (!shapes[i].transform.localToWorldMatrix.Equals(_transforms[i]))
+                if (!shapes[i].transform.localToWorldMatrix.Equals(_transforms[i])) // equals
                     return true;
 
-                // Timeline sets an emitter's fields without OnValidate, so its values are compared like transforms
                 if (!Nullable.Equals(StateOf(shapes[i]), _emitters[i]))
                     return true;
             }
@@ -60,7 +58,6 @@ namespace SpectralPathTracer
             _transforms.Clear();
             _emitters.Clear();
 
-            // indexing a read-only list skips the boxed enumerator foreach would allocate
             IReadOnlyList<TracedShape> shapes = TracedRegistry.Shapes;
             for (int i = 0; i < shapes.Count; i++)
             {
