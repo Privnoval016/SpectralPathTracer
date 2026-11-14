@@ -31,7 +31,7 @@ CBUFFER_START(FrameConstants)
     float _SplitPosition;
     uint _SplitScreen;
     float _LockedWavelength;
-    uint _Padding1;
+    uint _StratifyWavelengths;
 CBUFFER_END
 
 

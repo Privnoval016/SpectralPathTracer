@@ -60,6 +60,9 @@ namespace SpectralPathTracer
         [field: Range(0f, 1f)]
         [field: SerializeField] public float LightShare { get; private set; } = 0.5f;
 
+        [field: Tooltip("Spread each pixel's wavelength draws evenly over its samples instead of drawing them independently.")]
+        [field: SerializeField] public bool StratifyWavelengths { get; private set; } = true;
+
         [field: Tooltip("Stop accumulating after this many samples per pixel; 0 keeps going forever.")]
         [field: Min(0)]
         [field: SerializeField] public int TargetSamples { get; private set; } = 1024;

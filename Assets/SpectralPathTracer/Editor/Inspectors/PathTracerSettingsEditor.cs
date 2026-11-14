@@ -80,7 +80,10 @@ namespace SpectralPathTracer
 
             // no spectral image, or a locked wavelength, never draws from the distribution
             if (!drawsSpectral || settings.LockWavelength)
+            {
                 hidden.Add("<LightShare>k__BackingField");
+                hidden.Add("<StratifyWavelengths>k__BackingField");
+            }
 
 
             return hidden.ToArray();

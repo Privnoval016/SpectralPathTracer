@@ -21,6 +21,7 @@ namespace SpectralPathTracer
         public bool Spectral { get; }
         public bool SplitScreen { get; }
         public float LockedWavelength { get; } // nm, or 0 while spectral paths draw random wavelengths
+        public bool StratifyWavelengths { get; }
         public Aov Aov { get; }
         public Vector2 DepthRange { get; }
         public int NoiseDimension { get; }
@@ -34,7 +35,7 @@ namespace SpectralPathTracer
 
         #endregion
 
-        private RenderParams(PinholeCamera camera, Vector2Int renderSize, Vector2Int outputSize, int maxBounces, bool pixelJitter, bool russianRoulette, bool spectral, bool splitScreen, float lockedWavelength, Aov aov, Vector2 depthRange, int noiseDimension)
+        private RenderParams(PinholeCamera camera, Vector2Int renderSize, Vector2Int outputSize, int maxBounces, bool pixelJitter, bool russianRoulette, bool spectral, bool splitScreen, float lockedWavelength, bool stratifyWavelengths, Aov aov, Vector2 depthRange, int noiseDimension)
         {
             Camera = camera;
             RenderSize = renderSize;
@@ -45,6 +46,7 @@ namespace SpectralPathTracer
             Spectral = spectral;
             SplitScreen = splitScreen;
             LockedWavelength = lockedWavelength;
+            StratifyWavelengths = stratifyWavelengths;
             Aov = aov;
             DepthRange = depthRange;
             NoiseDimension = noiseDimension;
@@ -66,7 +68,7 @@ namespace SpectralPathTracer
         public static RenderParams From(PathTracerSettings settings, AovSettings aovSettings, PinholeCamera camera, bool isPlaying, bool spectral, bool splitScreen, float lockedWavelength)
         {
             var depthRange = new Vector2(aovSettings.DepthNear, aovSettings.DepthFar);
-            return new RenderParams(camera, settings.RenderResolutionFor(isPlaying), settings.OutputResolution, settings.MaxBounces, settings.PixelJitter, settings.RussianRoulette, spectral, splitScreen, lockedWavelength, aovSettings.Aov, depthRange, aovSettings.NoiseDimension);
+            return new RenderParams(camera, settings.RenderResolutionFor(isPlaying), settings.OutputResolution, settings.MaxBounces, settings.PixelJitter, settings.RussianRoulette, spectral, splitScreen, lockedWavelength, settings.StratifyWavelengths, aovSettings.Aov, depthRange, aovSettings.NoiseDimension);
         }
 
         public bool Equals(RenderParams other)
@@ -82,6 +84,7 @@ namespace SpectralPathTracer
                 && Spectral == other.Spectral
                 && SplitScreen == other.SplitScreen
                 && LockedWavelength == other.LockedWavelength
+                && StratifyWavelengths == other.StratifyWavelengths
                 && Aov == other.Aov
                 && DepthRange == other.DepthRange
                 && NoiseDimension == other.NoiseDimension;

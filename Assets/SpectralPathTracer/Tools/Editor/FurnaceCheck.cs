@@ -85,10 +85,21 @@ namespace SpectralPathTracer
                 Debug.LogError(verdict); // shows up in the console's error count without reading the message
         }
 
-        private static bool IsSpectral(out float lockedWavelength)
+        /**
+         * <summary>
+         * Finds the project's path tracer settings asset.
+         * </summary>
+         * <returns>The settings, or null if there are none.</returns>
+         */
+        internal static PathTracerSettings LoadSettings()
         {
             string[] guids = AssetDatabase.FindAssets("t:PathTracerSettings");
-            var settings = guids.Length > 0 ? AssetDatabase.LoadAssetAtPath<PathTracerSettings>(AssetDatabase.GUIDToAssetPath(guids[0])) : null;
+            return guids.Length > 0 ? AssetDatabase.LoadAssetAtPath<PathTracerSettings>(AssetDatabase.GUIDToAssetPath(guids[0])) : null;
+        }
+
+        internal static bool IsSpectral(out float lockedWavelength)
+        {
+            PathTracerSettings settings = LoadSettings();
 
             lockedWavelength = PathTracerOverrides.LockedWavelength ?? (settings != null && settings.LockWavelength ? settings.LockedWavelength : 0f);
 
@@ -105,12 +116,7 @@ namespace SpectralPathTracer
          */
         private static float D65Radiance(float lambda)
         {
-            float d65Y = 0f;
-            for (int row = Cie.FirstWavelength; row <= Cie.LastWavelength; row++)
-                d65Y += Cie.D65At(row) * Cie.MatchingFunctions(row).y; // the same 1 nm sum as CIE_D65_SCALE
-
-
-            return Cie.D65At(lambda) * Cie.YIntegral / d65Y;
+            return Cie.D65At(lambda) * Cie.D65Scale(); // the same scale as CIE_D65_SCALE
         }
 
         /**

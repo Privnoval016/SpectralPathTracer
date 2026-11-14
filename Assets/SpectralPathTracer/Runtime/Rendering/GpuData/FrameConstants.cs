@@ -47,7 +47,7 @@ namespace SpectralPathTracer
         public float _SplitPosition; // 224
         public uint _SplitScreen; // 228
         public float _LockedWavelength; // 232, nm, or 0 while spectral paths draw random wavelengths
-        public uint _Padding1; // 236
+        public uint _StratifyWavelengths; // 236, 1 to spread each pixel's wavelength draws evenly over its samples
 
         // size = 240, a multiple of 16
     }

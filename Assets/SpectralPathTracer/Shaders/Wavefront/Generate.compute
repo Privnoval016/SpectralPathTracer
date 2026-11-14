@@ -64,7 +64,15 @@ void Generate(uint3 id : SV_DispatchThreadID)
     path.PixelIndex = pixelIndex;
     path.Flags = PATHFLAGS_ACTIVE | ALL_LANES;
     path.SampleIndex = _SampleIndex;
-    StoreWavelengths(path, SampleWavelengths(SampleUniform(OutputPixel(pixel), _SampleIndex, BounceDimension(0u, SLOT_WAVELENGTH))));
+
+    // stratified draws spread each pixel's wavelengths evenly over its samples
+    uint2 outputPixel = OutputPixel(pixel);
+    uint wavelengthDimension = BounceDimension(0u, SLOT_WAVELENGTH);
+    float u = _StratifyWavelengths != 0u
+        ? SampleStratified(outputPixel, _SampleIndex, wavelengthDimension)
+        : SampleUniform(outputPixel, _SampleIndex, wavelengthDimension);
+    StoreWavelengths(path, SampleWavelengths(u));
+
     StorePath(_Paths, id.x, path);
 
     // every slot starts alive, so queue A holds the whole wave

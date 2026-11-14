@@ -229,7 +229,8 @@ namespace SpectralPathTracer
                 _SplitScreen = renderParams.SplitScreen ? 1u : 0u,
 
                 // only set while a spectral image is drawn, so Display can tell the locked image by it
-                _LockedWavelength = renderParams.Spectral || renderParams.SplitScreen ? renderParams.LockedWavelength : 0f
+                _LockedWavelength = renderParams.Spectral || renderParams.SplitScreen ? renderParams.LockedWavelength : 0f,
+                _StratifyWavelengths = renderParams.StratifyWavelengths ? 1u : 0u
             };
         }
 

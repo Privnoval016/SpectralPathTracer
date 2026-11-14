@@ -26,6 +26,8 @@ static const uint SLOT_BSDF_V = 1u;
 static const uint SLOT_RUSSIAN_ROULETTE = 2u;
 static const uint SLOT_WAVELENGTH = 3u; // drawn once per sample, so only depth 0 uses it
 
+static const uint GOLDEN_RATIO_STEP = 2654435769u; // 2^32 / phi: gyro! its the golden spin! STEEL BALL RUN STEEL BALL RUN
+
 uint BounceDimension(uint depth, uint slot)
 {
     return DIMENSION_BOUNCE_BASE + depth * DIMENSIONS_PER_BOUNCE + slot;
@@ -56,6 +58,22 @@ float2 SampleBsdf2D(uint2 outputPixel, uint sampleIndex, uint depth)
 {
     return float2(SampleUniform(outputPixel, sampleIndex, BounceDimension(depth, SLOT_BSDF_U)),
                   SampleUniform(outputPixel, sampleIndex, BounceDimension(depth, SLOT_BSDF_V)));
+}
+
+/**
+ * <summary>
+ * Draws a number whose values over a pixel's samples spread evenly across [0, 1), starting at a random point per pixel.
+ * </summary>
+ * <param name="outputPixel">The pixel coordinates in the output buffer.</param>
+ * <param name="sampleIndex">The path's sample index.</param>
+ * <param name="dimension">The decision's dimension, which picks the starting point.</param>
+ * <returns>A uniform number in [0, 1), stratified across the pixel's samples.</returns>
+ */
+float SampleStratified(uint2 outputPixel, uint sampleIndex, uint dimension)
+{
+    // a random start per pixel so pixels don't draw the same value at the same sample
+    uint start = Pcg4d(uint4(outputPixel, 0u, dimension)).x;
+    return UintToUnitFloat(start + sampleIndex * GOLDEN_RATIO_STEP); // uint math wraps exactly
 }
 
 #endif
