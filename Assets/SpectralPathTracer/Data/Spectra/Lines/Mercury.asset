@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 76c568c6aefce4fdfb0ebd9aaddc19ed, type: 3}
+  m_Name: Mercury
+  m_EditorClassIdentifier: SpectralPathTracer::SpectralPathTracer.LineSpectrum
+  <Lines>k__BackingField:
+  - Center: 404.66
+    Width: 0.5
+    Strength: 1.8
+  - Center: 435.83
+    Width: 0.5
+    Strength: 4
+  - Center: 546.07
+    Width: 0.5
+    Strength: 5
+  - Center: 576.96
+    Width: 0.5
+    Strength: 1
+  - Center: 579.07
+    Width: 0.5
+    Strength: 1

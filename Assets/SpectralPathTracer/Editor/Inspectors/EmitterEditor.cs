@@ -32,6 +32,9 @@ namespace SpectralPathTracer
             if (kind != EmissionKind.Measured)
                 hidden.Add("<Spectrum>k__BackingField");
 
+            if (kind != EmissionKind.Lines)
+                hidden.Add("<Lines>k__BackingField");
+
             if (kind != EmissionKind.Blackbody)
                 hidden.Add("<Temperature>k__BackingField");
 

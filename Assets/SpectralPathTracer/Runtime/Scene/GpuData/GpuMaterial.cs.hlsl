@@ -15,6 +15,8 @@ struct GpuMaterial
     int Type;
     int ReflectanceTable;
     int EmissionTable;
+    int LineStart;
+    int LineCount;
 };
 
 

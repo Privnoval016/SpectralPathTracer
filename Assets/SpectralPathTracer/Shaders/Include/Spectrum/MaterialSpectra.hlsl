@@ -11,6 +11,7 @@
 #include "SampledSpectrum.hlsl"
 #include "SigmoidSpectrum.hlsl"
 #include "TabulatedSpectrum.hlsl"
+#include "LineSpectrum.hlsl"
 
 /**
  * <summary>
@@ -46,9 +47,11 @@ SampledSpectrum EmissionSpectrum(GpuMaterial material, SampledWavelengths wavele
 {
 #ifdef SPECTRAL
     // a measured lamp is its own spectrum, while an RGB light's white is D65 with a shape on top
-    SampledSpectrum emission = material.EmissionTable >= 0
-        ? TabulatedSpectrum((uint)material.EmissionTable, wavelengths.Lambda)
-        : EvaluateSigmoid(material.EmissionSpectrum, wavelengths.Lambda) * D65Spectrum(wavelengths.Lambda);
+    SampledSpectrum emission = material.LineCount > 0
+        ? LineSpectrum((uint)material.LineStart, (uint)material.LineCount, wavelengths.Lambda)
+        : material.EmissionTable >= 0
+            ? TabulatedSpectrum((uint)material.EmissionTable, wavelengths.Lambda)
+            : EvaluateSigmoid(material.EmissionSpectrum, wavelengths.Lambda) * D65Spectrum(wavelengths.Lambda);
 #else
     SampledSpectrum emission = float4(material.Emission, 0.0f);
 #endif

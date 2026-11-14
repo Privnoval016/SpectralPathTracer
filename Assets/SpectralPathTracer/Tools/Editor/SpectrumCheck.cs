@@ -9,6 +9,7 @@ namespace SpectralPathTracer
     {
         private const int MonteCarloSamples = 65536;
         private const int TableSamples = 1000; // random colors sent through the sigmoid table
+        private const string SodiumPath = "Assets/SpectralPathTracer/Data/Spectra/Lines/Sodium.asset";
 
         [MenuItem("Tools/Spectral Path Tracer/Spectrum Check")]
         public static void Run()
@@ -61,6 +62,15 @@ namespace SpectralPathTracer
 
             foreach (float kelvin in new[] { 1800f, 6504f, 10000f })
                 Report($"{kelvin} K luminance on the GPU grid", TableLuminance(Blackbody.Resample(kelvin, 1f)), 1f, 2e-3f);
+
+
+            // sodium's color, against the matching functions at its two line centers weighted 2 to 1, and the line peaks' total area
+            var sodium = AssetDatabase.LoadAssetAtPath<LineSpectrum>(SodiumPath);
+            Vector3 sodiumRgb = sodium.EmissionRgb();
+            Report("sodium red at Y = 1", sodiumRgb.x, 2.772f, 2e-3f);
+            Report("sodium green at Y = 1", sodiumRgb.y, 0.587f, 2e-3f);
+            Report("sodium blue at Y = 1", sodiumRgb.z, -0.128f, 2e-3f);
+            Report("sodium lines' total area", LineArea(sodium.GpuLines()), 1f, 1e-5f);
         }
 
         /**
@@ -263,6 +273,23 @@ namespace SpectralPathTracer
 
 
             return (float)(sum / MonteCarloSamples);
+        }
+
+        /**
+         * <summary>
+         * Adds up the area under a lamp's Gaussian lines, peak times sigma times the square root of 2 pi each.
+         * </summary>
+         * <param name="lines">The lines as (center, sigma, peak, 0).</param>
+         * <returns>The total area.</returns>
+         */
+        private static float LineArea(Vector4[] lines)
+        {
+            float area = 0f;
+            foreach (Vector4 line in lines)
+                area += line.z * line.y * Mathf.Sqrt(2f * Mathf.PI);
+
+
+            return area;
         }
 
         private static void Report(string name, float value, float expected, float tolerance)

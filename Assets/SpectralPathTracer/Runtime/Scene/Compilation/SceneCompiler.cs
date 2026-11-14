@@ -79,7 +79,7 @@ namespace SpectralPathTracer
          */
         public SceneBuffers Import(RenderGraph renderGraph)
         {
-            return new SceneBuffers(_objects.Import(renderGraph), _materials.ImportMaterials(renderGraph), _materials.ImportSpectra(renderGraph), _wavelengths.Import(renderGraph), ObjectCount);
+            return new SceneBuffers(_objects.Import(renderGraph), _materials.ImportMaterials(renderGraph), _materials.ImportSpectra(renderGraph), _materials.ImportLines(renderGraph), _wavelengths.Import(renderGraph), ObjectCount);
         }
 
 

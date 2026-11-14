@@ -16,5 +16,7 @@ namespace SpectralPathTracer
         public int Type; // MaterialType
         public int ReflectanceTable; // which measured spectrum in the spectrum buffer, or -1 for the sigmoid
         public int EmissionTable; // the same for emission, already scaled to the material's strength
+        public int LineStart; // the lamp's first line in the line buffer
+        public int LineCount; // how many lines it has, 0 for a smooth spectrum
     }
 }

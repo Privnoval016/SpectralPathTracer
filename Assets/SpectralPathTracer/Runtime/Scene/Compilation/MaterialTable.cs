@@ -24,9 +24,11 @@ namespace SpectralPathTracer
         private int _defaultMaterialIndex = -1;
 
         private readonly List<float> _spectrumData = new List<float>(); // measured spectra, 95 values each
+        private readonly List<Vector4> _lineData = new List<Vector4>(); // spectral lines, (center, sigma, peak, 0) each
 
         private readonly GrowableBuffer<GpuMaterial> _materials = new GrowableBuffer<GpuMaterial>("PathTracerMaterials");
         private readonly GrowableBuffer<float> _spectrumTables = new GrowableBuffer<float>("PathTracerSpectra");
+        private readonly GrowableBuffer<Vector4> _lines = new GrowableBuffer<Vector4>("PathTracerLines");
 
         private readonly SigmoidTable _sigmoidTable; // null when no table is assigned which leaves every spectrum black
 
@@ -52,6 +54,7 @@ namespace SpectralPathTracer
         {
             _materialData.Clear();
             _spectrumData.Clear();
+            _lineData.Clear();
             _materialIndices.Clear();
             _defaultMaterialIndex = -1;
         }
@@ -80,6 +83,9 @@ namespace SpectralPathTracer
         public float EmissionAt(int index, int lambda, float d65Scale)
         {
             GpuMaterial material = _materialData[index];
+            if (material.LineCount > 0)
+                return LinesAt(material, lambda);
+
             if (material.EmissionTable >= 0)
                 return TableAt(material.EmissionTable, lambda);
 
@@ -97,8 +103,13 @@ namespace SpectralPathTracer
             if (_spectrumData.Count == 0)
                 _spectrumData.Add(0f);
 
+            // and the line buffer at least one line
+            if (_lineData.Count == 0)
+                _lineData.Add(Vector4.zero);
+
             _materials.Upload(_materialData);
             _spectrumTables.Upload(_spectrumData);
+            _lines.Upload(_lineData);
         }
 
         public BufferHandle ImportMaterials(RenderGraph renderGraph)
@@ -111,10 +122,16 @@ namespace SpectralPathTracer
             return _spectrumTables.Import(renderGraph);
         }
 
+        public BufferHandle ImportLines(RenderGraph renderGraph)
+        {
+            return _lines.Import(renderGraph);
+        }
+
         public void Dispose()
         {
             _materials.Dispose();
             _spectrumTables.Dispose();
+            _lines.Dispose();
         }
 
         #region Helpers
@@ -124,15 +141,14 @@ namespace SpectralPathTracer
             if (material == null)
             {
                 if (_defaultMaterialIndex < 0)
-                    _defaultMaterialIndex = AddMaterial(SpectralMaterial.DefaultAlbedo, null, Vector3.zero, null);
+                    _defaultMaterialIndex = AddMaterial(SpectralMaterial.DefaultAlbedo, null, ResolvedEmission.None);
 
                 return _defaultMaterialIndex;
             }
 
             if (!_materialIndices.TryGetValue(material, out int index))
             {
-                (Vector3 emissionRgb, float[] emissionTable) = MaterialEmission(material);
-                index = AddMaterial(material.Albedo, material.ReflectanceSpectrum, emissionRgb, emissionTable);
+                index = AddMaterial(material.Albedo, material.ReflectanceSpectrum, MaterialEmission(material));
                 _materialIndices.Add(material, index);
             }
 
@@ -149,12 +165,12 @@ namespace SpectralPathTracer
          */
         private int AddEmitterMaterial(SpectralMaterial material, Emitter emitter)
         {
-            (Vector3 emissionRgb, float[] emissionTable) = EmitterEmission(emitter);
+            ResolvedEmission emission = EmitterEmission(emitter);
 
 
             return material != null
-                ? AddMaterial(material.Albedo, material.ReflectanceSpectrum, emissionRgb, emissionTable)
-                : AddMaterial(SpectralMaterial.DefaultAlbedo, null, emissionRgb, emissionTable);
+                ? AddMaterial(material.Albedo, material.ReflectanceSpectrum, emission)
+                : AddMaterial(SpectralMaterial.DefaultAlbedo, null, emission);
         }
 
         /**
@@ -163,11 +179,10 @@ namespace SpectralPathTracer
          * </summary>
          * <param name="albedo">The picker albedo, used when there is no measured reflectance.</param>
          * <param name="reflectance">A measured reflectance, or null.</param>
-         * <param name="emissionRgb">The emission's linear sRGB color, for RGB mode and the sigmoid.</param>
-         * <param name="emissionTable">The emission resampled for the GPU, or null to use the sigmoid.</param>
+         * <param name="emission">The emission's color, and its table or lines if it has them.</param>
          * <returns>The entry's index.</returns>
          */
-        private int AddMaterial(Color albedo, MeasuredSpectrum reflectance, Vector3 emissionRgb, float[] emissionTable)
+        private int AddMaterial(Color albedo, MeasuredSpectrum reflectance, ResolvedEmission emission)
         {
             Color linearAlbedo = albedo.linear;
             var albedoRgb = new Vector3(linearAlbedo.r, linearAlbedo.g, linearAlbedo.b);
@@ -180,13 +195,15 @@ namespace SpectralPathTracer
             _materialData.Add(new GpuMaterial
             {
                 AlbedoSpectrum = _sigmoidTable?.Reflectance(albedoRgb) ?? Vector4.zero,
-                EmissionSpectrum = _sigmoidTable?.Unbounded(emissionRgb) ?? Vector4.zero,
+                EmissionSpectrum = _sigmoidTable?.Unbounded(emission.Rgb) ?? Vector4.zero,
                 Albedo = albedoRgb,
-                Emission = emissionRgb,
+                Emission = emission.Rgb,
                 Type = (int)MaterialType.Lambert,
 
                 ReflectanceTable = reflectance != null ? AddSpectrumTable(reflectance.Resample()) : -1,
-                EmissionTable = emissionTable != null ? AddSpectrumTable(emissionTable) : -1
+                EmissionTable = emission.Table != null ? AddSpectrumTable(emission.Table) : -1,
+                LineStart = _lineData.Count,
+                LineCount = AddLines(emission.Lines)
             });
             return _materialData.Count - 1;
         }
@@ -207,6 +224,33 @@ namespace SpectralPathTracer
             return index;
         }
 
+        /**
+         * <summary>
+         * Appends a lamp's lines to the line buffer.
+         * </summary>
+         * <param name="lines">The lines, or null for none.</param>
+         * <returns>How many lines were added.</returns>
+         */
+        private int AddLines(Vector4[] lines)
+        {
+            if (lines == null)
+                return 0;
+
+            _lineData.AddRange(lines);
+            return lines.Length;
+        }
+
+        // the CPU twin of LinesAt
+        private float LinesAt(GpuMaterial material, int lambda)
+        {
+            float value = 0f;
+            for (int i = 0; i < material.LineCount; i++)
+                value += LineSpectrum.Gaussian(_lineData[material.LineStart + i], lambda);
+
+
+            return value;
+        }
+
         // the CPU twin of TabulatedAt, reading the 5 nm values this rebuild appended
         private float TableAt(int table, int lambda)
         {
@@ -223,18 +267,18 @@ namespace SpectralPathTracer
          * A material's emission as a color and, for a measured spectrum, a table.
          * </summary>
          * <param name="material">The material.</param>
-         * <returns>The linear sRGB color and the table, or null for the sigmoid.</returns>
+         * <returns>The linear sRGB color, and the table for a measured spectrum.</returns>
          */
-        private static (Vector3, float[]) MaterialEmission(SpectralMaterial material)
+        private static ResolvedEmission MaterialEmission(SpectralMaterial material)
         {
             float strength = material.EmissionStrength;
             if (material.EmissionSpectrum != null)
-                return (material.EmissionSpectrum.EmissionRgb() * strength, material.EmissionSpectrum.Resample(material.EmissionSpectrum.EmissionNormalization() * strength));
+                return new ResolvedEmission(material.EmissionSpectrum.EmissionRgb() * strength, material.EmissionSpectrum.Resample(material.EmissionSpectrum.EmissionNormalization() * strength));
 
             Color linear = material.EmissionColor.linear * strength;
 
 
-            return (new Vector3(linear.r, linear.g, linear.b), null);
+            return new ResolvedEmission(new Vector3(linear.r, linear.g, linear.b));
         }
 
         /**
@@ -242,18 +286,21 @@ namespace SpectralPathTracer
          * An emitter's emission as a color and, for a measured spectrum, a table.
          * </summary>
          * <param name="emitter">The emitter.</param>
-         * <returns>The linear sRGB color and the table, or null for the sigmoid.</returns>
+         * <returns>The linear sRGB color, and the table or lines when the spectrum has them.</returns>
          */
-        private static (Vector3, float[]) EmitterEmission(Emitter emitter)
+        private static ResolvedEmission EmitterEmission(Emitter emitter)
         {
             float strength = emitter.Strength;
             switch (emitter.Kind)
             {
                 case EmissionKind.Blackbody:
-                    return (Blackbody.Rgb(emitter.Temperature) * strength, Blackbody.Resample(emitter.Temperature, strength));
+                    return new ResolvedEmission(Blackbody.Rgb(emitter.Temperature) * strength, Blackbody.Resample(emitter.Temperature, strength));
 
                 case EmissionKind.Measured when emitter.Spectrum != null:
-                    return (emitter.Spectrum.EmissionRgb() * strength, emitter.Spectrum.Resample(emitter.Spectrum.EmissionNormalization() * strength));
+                    return new ResolvedEmission(emitter.Spectrum.EmissionRgb() * strength, emitter.Spectrum.Resample(emitter.Spectrum.EmissionNormalization() * strength));
+
+                case EmissionKind.Lines when emitter.Lines != null && emitter.Lines.Lines.Count > 0:
+                    return new ResolvedEmission(emitter.Lines.EmissionRgb() * strength, lines: emitter.Lines.GpuLines(emitter.Lines.EmissionNormalization() * strength));
 
                 default:
                 {
@@ -263,7 +310,7 @@ namespace SpectralPathTracer
                     float y = Cie.LinearSrgbToXyz(rgb).y;
 
 
-                    return (y > 0f ? rgb / y * strength : Vector3.zero, null);
+                    return new ResolvedEmission(y > 0f ? rgb / y * strength : Vector3.zero);
                 }
             }
         }

@@ -15,17 +15,19 @@ namespace SpectralPathTracer
         public EmissionKind Kind { get; }
         public Color Color { get; }
         public MeasuredSpectrum Spectrum { get; }
+        public LineSpectrum Lines { get; }
         public float Temperature { get; } // kelvin
         public float Strength { get; } // luminance Y
 
         #endregion
 
 
-        public EmitterState(EmissionKind kind, Color color, MeasuredSpectrum spectrum, float temperature, float strength)
+        public EmitterState(EmissionKind kind, Color color, MeasuredSpectrum spectrum, LineSpectrum lines, float temperature, float strength)
         {
             Kind = kind;
             Color = color;
             Spectrum = spectrum;
+            Lines = lines;
             Temperature = temperature;
             Strength = strength;
         }
@@ -36,6 +38,7 @@ namespace SpectralPathTracer
             return Kind == other.Kind
                 && Color.Equals(other.Color)
                 && Spectrum == other.Spectrum
+                && Lines == other.Lines
                 && Temperature == other.Temperature
                 && Strength == other.Strength;
         }
