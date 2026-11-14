@@ -12,6 +12,9 @@ namespace SpectralPathTracer
         private const double SpeedOfLight = 2.99792458e8; // c, in m / s
         private const double BoltzmannConstant = 1.380649e-23; // k, in J / K
 
+        public const float MinTemperature = 1000f; // kelvin, the coolest an emitter or a sweep can be set to
+        public const float MaxTemperature = 20000f; // kelvin, the hottest
+
         public const float WienConstant = 2.897771955e6f; // nm K so the peak sits at WienConstant / T nm
 
         #endregion

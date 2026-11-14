@@ -5,6 +5,12 @@ namespace SpectralPathTracer
     [CreateAssetMenu(fileName = "PathTracerSettings", menuName = "Spectral Path Tracer/Path Tracer Settings")]
     public class PathTracerSettings : ScriptableObject
     {
+        #region Constants
+
+        public const int MaxBounceLimit = 16; // the most bounces the slider allows, which the live path stats are sized for
+
+        #endregion
+
         #region Inspector Fields
         
         [Header("Mode Settings")]
@@ -30,7 +36,7 @@ namespace SpectralPathTracer
         [field: SerializeField] public Vector2Int OutputResolution { get; private set; } = new Vector2Int(1920, 1080);
 
         [field: Tooltip("How many times a path may bounce after the camera ray's first hit.")]
-        [field: Range(0, 16)]
+        [field: Range(0, MaxBounceLimit)]
         [field: SerializeField] public int MaxBounces { get; private set; } = 16;
 
         [field: Tooltip("End dim paths at random and boost the survivors, so long paths cost less without darkening the image.")]
@@ -53,7 +59,7 @@ namespace SpectralPathTracer
         [field: SerializeField] public bool LockWavelength { get; private set; } = false;
 
         [field: Tooltip("The wavelength in nm every spectral path traces while locked.")]
-        [field: Range(360f, 830f)]
+        [field: Range(Cie.FirstWavelength, Cie.LastWavelength)]
         [field: SerializeField] public float LockedWavelength { get; private set; } = 550f;
 
         [field: Tooltip("How much of the wavelength distribution follows the scene's lights; the rest follows the eye.")]

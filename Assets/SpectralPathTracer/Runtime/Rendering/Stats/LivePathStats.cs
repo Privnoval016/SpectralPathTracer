@@ -7,7 +7,7 @@ namespace SpectralPathTracer
 {
     public class LivePathStats
     {
-        public const int MaxDepths = 32; // room for 16 + 1 depths
+        public const int MaxDepths = PathTracerSettings.MaxBounceLimit + 1; // room for 16 + 1 depths
 
         private readonly uint[] _zeroes = new uint[MaxDepths];
         private readonly Action<AsyncGPUReadbackRequest> _onReadback;

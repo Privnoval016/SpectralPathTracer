@@ -22,11 +22,11 @@ namespace SpectralPathTracer
         #region Inspector Fields
 
         [field: Tooltip("The temperature at progress 0, in kelvin.")]
-        [field: Range(1000f, 20000f)]
+        [field: Range(Blackbody.MinTemperature, Blackbody.MaxTemperature)]
         [field: SerializeField] public float StartTemperature { get; private set; } = 1800f;
 
         [field: Tooltip("The temperature at progress 1, in kelvin.")]
-        [field: Range(1000f, 20000f)]
+        [field: Range(Blackbody.MinTemperature, Blackbody.MaxTemperature)]
         [field: SerializeField] public float EndTemperature { get; private set; } = 10000f;
 
         [field: Tooltip("How far along the sweep the emitter is; Timeline animates this.")]
