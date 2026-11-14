@@ -35,6 +35,7 @@ flowchart TD
         resample["Resample<br/>360 to 830 nm every 5 nm,<br/>lights normalized to Y = 1 times strength"]
         tocolor["Spectrum to linear sRGB<br/>integrate with D65 and the CMFs,<br/>then the XYZ to sRGB matrix"]
         planck["Blackbody<br/>Planck at T, scaled to Y = strength,<br/>resampled every 5 nm and integrated to a color"]
+        cdf["WavelengthTable<br/>eye (x + y + z) mixed with every light<br/>by Light Share, 1% uniform floor, as a CDF"]
     end
 
     subgraph GPU_RGB["GPU, RGB mode"]
@@ -43,7 +44,7 @@ flowchart TD
     end
 
     subgraph GPU_SPEC["GPU, spectral mode"]
-        lambda["Generate<br/>pick lambda, uniform, p = 1 / 470"]
+        lambda["Generate<br/>pick lambda from the wavelength CDF,<br/>stratified per pixel, p = the bin's probability"]
         evaluate["Shade<br/>reflectance: table or S(c0 l^2 + c1 l + c2)<br/>emission and sky: times D65(l)"]
         estimate["Resolve<br/>XYZ = L(l) cmf(l) / p / (4 integral of y-bar)"]
         xyzsum["Sums of XYZ"]
@@ -63,6 +64,9 @@ flowchart TD
     emitter -- "color, at Y = strength" --> fit
     planck -- "emission color" --> rgbpath
     planck -- "spectrum buffer" --> evaluate
+    planck -- "emission at each nm" --> cdf
+    resample -- "emission at each nm" --> cdf
+    cdf -- "wavelength CDF" --> lambda
 
     linear -- "albedo, emission, sky colors" --> rgbpath --> rgbsum --> display
     coeffs --> evaluate
@@ -81,6 +85,7 @@ HLSL include. Both read the C# tables in `Cie`, so the CPU and the GPU use the s
 |---|---|---|
 | Decode encoded sRGB | $c \le 0.04045:\ c/12.92$, else $\left(\frac{c + 0.055}{1.055}\right)^{2.4}$ | `Color.linear` in `SceneCompiler` |
 | Spectrum to XYZ | $\mathrm{XYZ} = \int L(\lambda)\,\big(\bar x, \bar y, \bar z\big)(\lambda)\,d\lambda \,/\, \int \bar y\,d\lambda$ | `Cie.MatchingFunctions`, `MatchingFunctions` in `Cie.hlsl` |
+| Wavelength pdf | $p_i = w_i / \sum w$ per 1 nm bin, $w = 0.99\,[(1 - \alpha)\,v/\sum v + \alpha\,\ell/\sum \ell] + 0.01/470$, eye $v = \bar x + \bar y + \bar z$, light $\ell = L\,(\bar x + \bar y + \bar z)$ | `WavelengthDistribution`, `SampleWavelengthCdf` |
 | One sample's XYZ | $\frac{1}{4}\sum_i L(\lambda_i)\,\bar{\mathbf x}(\lambda_i)/p(\lambda_i) \,/\, \int \bar y$ | `SpectrumToColor` in `SampledSpectrum.hlsl` |
 | XYZ to linear sRGB | the 3x3 matrix from sRGB's primaries and D65 | `Cie.XyzToLinearSrgb`, `XYZ_TO_SRGB` |
 | Linear sRGB to XYZ | that matrix's inverse | `Cie.LinearSrgbToXyz` |
@@ -107,9 +112,12 @@ HLSL include. Both read the C# tables in `Cie`, so the CPU and the GPU use the s
   white only reaches 0.99986, which the locked furnace exposed.
 - An `Emitter`'s light has luminance $Y$ equal to its Strength whatever its kind, temperature or color, and RGB mode
   uses the color its spectrum integrates to, so the light itself matches across modes and only bounces differ.
+- The wavelength pdf may have any shape as long as it is positive wherever light can be seen, which the eye's half
+  and the 1% floor guarantee, and every sample divides by the probability of the bin it was drawn from. Changing Light
+  Share or stratification changes the noise, never the converged image.
 - AOVs are data, not light. Resolve accumulates them as they are, and Display skips the XYZ conversion for them.
 - `Cie` (C#) is the single source of the CIE data. Regenerate `CieTables.hlsl` with Tools > Spectral Path Tracer >
   Generate CIE Shader Table after changing it, and rebuild the sigmoid table with Build Sigmoid Table after changing
   the fit.
 
-The checkpoint devlogs cp-25, cp-26 and cp-29 in `Docs/Checkpoints` explain the math step by step.
+The checkpoint devlogs cp-25, cp-26, cp-29 and cp-30 in `Docs/Checkpoints` explain the math step by step.

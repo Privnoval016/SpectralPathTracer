@@ -19,6 +19,9 @@ accumulation has got, `PathTracerOverrides` to override the target, the budget o
   it, and sets `PathTracerOverrides.SplitPosition`, which clears when the component is disabled or Play Mode ends.
 - Tools > Spectral Path Tracer > Furnace Check reads the accumulated radiance back as floats and judges it against
   the scene's `FurnaceExpectation`.
+- Tools > Spectral Path Tracer > Noise Check > Save Reference stores the accumulated image of the open scene, ideally
+  at a few thousand samples, in `Recordings/NoiseReferences/<scene>.bin`; Compare reports the current image's RMSE and
+  relative MSE against it, in linear sRGB. Turn split screen off first.
 - Tools > Spectral Path Tracer > Spectrum Check proves the CIE tables, the XYZ to sRGB matrix and the $1/p$ of
   wavelength sampling against known values.
 
@@ -98,6 +101,14 @@ Each line logs PASS, or an error on FAIL. It needs no scene.
 | 1,000 random colors through the sigmoid table | worst delta E under 1 | a broken table or lookup |
 | A 6504 K blackbody at $Y = 1$ | sRGB (1.043, 0.984, 1.036), within $2 \times 10^{-3}$ | a wrong Planck constant or normalization |
 | Planck's peak at 1800 K, scanned | Wien's $2.898 \times 10^6 / 1800 = 1610$ nm, within 1 nm | a wrong exponent or unit |
+| Flat $Y$ through the eye's wavelength pdf, evenly spaced $u$ | exactly 1, within $10^{-3}$ | a CDF, search or pdf that disagree |
 | $Y$ of a blackbody resampled on the 5 nm grid at 1800, 6504, 10,000 K | 1, within $2 \times 10^{-3}$ | a broken luminance scale or resample |
 
 It also notes, without judging, how far the measured Cornell walls are from the hand-picked Cornell colors.
+
+## Noise check
+
+RMSE is ruled by bright pixels and relative MSE, $\frac{(x - r)^2}{r^2 + 0.01}$ per pixel, weighs every pixel by its
+own brightness, so report both. Compare setups at the same sample count against one reference; the reference's own
+noise adds about $N_{\text{test}}/N_{\text{ref}}$ to the measured variance, 3% at 64 against 2048. cp-30's table is in
+its devlog.

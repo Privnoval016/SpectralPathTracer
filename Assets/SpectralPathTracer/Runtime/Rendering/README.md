@@ -39,7 +39,7 @@ flowchart TD
 
 | Stage | Threads | Reads | Writes |
 |---|---|---|---|
-| Generate | one per slot in the wave | frame constants | rays, path state, queue A, counters, dispatch args |
+| Generate | one per slot in the wave | frame constants, the wavelength CDF (scene buffers) | rays, path state, queue A, counters, dispatch args |
 | Intersect | one per queued path (indirect) | rays, queue, scene objects | hits |
 | Shade | one per queued path (indirect) | hits, rays, path state, scene, materials, frame constants | path state, rays, the other queue |
 | Args | one | counters | dispatch args, counters, live path counts |
